@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Azota - 11A1</title>
+    <style>
+        :root { --primary: #4f46e5; --bg: #f8fafc; }
+        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 12px; shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .q-card { border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+        button { width: 100%; background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .option { display: block; padding: 10px; background: #f1f5f9; margin: 5px 0; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Bài thi duy nhất</h2>
+        <input type="text" id="name" placeholder="Họ tên của bạn">
+        <input type="password" id="code" placeholder="Mã vào thi (Passcode)">
+        <hr>
+        <div id="quiz">
+            <div class="q-card">
+                <p><strong>Câu 1:</strong> k-NN thuộc loại thuật toán nào?</p>
+                <label class="option"><input type="radio" name="q1" value="Lazy learner"> Lazy learner</label>
+                <label class="option"><input type="radio" name="q1" value="Eager learner"> Eager learner</label>
+            </div>
+            <div class="q-card">
+                <p><strong>Câu 2:</strong> LSTM giải quyết vấn đề gì của RNN?</p>
+                <label class="option"><input type="radio" name="q2" value="Vanishing Gradient"> Vanishing Gradient</label>
+                <label class="option"><input type="radio" name="q2" value="Overfitting"> Overfitting</label>
+            </div>
+        </div>
+        <button onclick="submit()">Nộp bài</button>
+    </div>
+
+    <script>
+        const startTime = new Date().toISOString();
+        async function submit() {
+            const name = document.getElementById('name').value;
+            const code = document.getElementById('code').value;
+            const answers = {
+                "1": document.querySelector('input[name="q1"]:checked')?.value,
+                "2": document.querySelector('input[name="q2"]:checked')?.value
+            };
+
+            const res = await fetch('/submit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name, code, answers, start_time: startTime })
+            });
+            const data = await res.json();
+            if(res.ok) {
+                alert(`Xong! Điểm: ${data.score}. Thời gian làm: ${data.duration}`);
+                location.reload();
+            } else {
+                alert(data.error);
+            }
+        }
+    </script>
+</body>
+</html>
