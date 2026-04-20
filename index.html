@@ -3,24 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini Azota - 11A1</title>
+    <title>Hệ thống thi nội bộ - 11A1</title>
     <style>
         :root { --primary: #4f46e5; --bg: #f8fafc; }
-        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 20px; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 12px; shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        body { font-family: sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; }
+        .container { max-width: 600px; width: 100%; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .hidden { display: none; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; }
+        .timer-box { font-size: 20px; font-weight: bold; color: #ef4444; text-align: center; margin-bottom: 20px; padding: 10px; background: #fee2e2; border-radius: 8px; }
         .q-card { border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-        input[type="text"], input[type="password"] { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
-        button { width: 100%; background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
         .option { display: block; padding: 10px; background: #f1f5f9; margin: 5px 0; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Bài thi duy nhất</h2>
-        <input type="text" id="name" placeholder="Họ tên của bạn">
+
+<div class="container">
+    <div id="login-screen">
+        <h2 style="text-align: center;">VÀO PHÒNG THI</h2>
+        <p style="text-align: center; color: #64748b;">Vui lòng nhập thông tin để bắt đầu</p>
+        <input type="text" id="name" placeholder="Họ và tên của bạn">
         <input type="password" id="code" placeholder="Mã vào thi (Passcode)">
-        <hr>
-        <div id="quiz">
+        <button onclick="startTest()">BẮT ĐẦU LÀM BÀI</button>
+    </div>
+
+    <div id="quiz-screen" class="hidden">
+        <div class="timer-box">Thời gian còn lại: <span id="time-display">10:00</span></div>
+        <div id="questions-list">
             <div class="q-card">
                 <p><strong>Câu 1:</strong> k-NN thuộc loại thuật toán nào?</p>
                 <label class="option"><input type="radio" name="q1" value="Lazy learner"> Lazy learner</label>
@@ -32,32 +41,74 @@
                 <label class="option"><input type="radio" name="q2" value="Overfitting"> Overfitting</label>
             </div>
         </div>
-        <button onclick="submit()">Nộp bài</button>
+        <button onclick="submitExam()">NỘP BÀI</button>
     </div>
+</div>
 
-    <script>
-        const startTime = new Date().toISOString();
-        async function submit() {
-            const name = document.getElementById('name').value;
-            const code = document.getElementById('code').value;
-            const answers = {
-                "1": document.querySelector('input[name="q1"]:checked')?.value,
-                "2": document.querySelector('input[name="q2"]:checked')?.value
-            };
+<script>
+    let timeLeft = 600; // 10 phút tính bằng giây
+    let timerInterval;
+    let startTime;
+    const CORRECT_CODE = "MaiHuyenDepGai"; // Mật khẩu bạn đặt
 
-            const res = await fetch('/submit', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ name, code, answers, start_time: startTime })
-            });
-            const data = await res.json();
-            if(res.ok) {
-                alert(`Xong! Điểm: ${data.score}. Thời gian làm: ${data.duration}`);
-                location.reload();
-            } else {
-                alert(data.error);
-            }
+    function startTest() {
+        const name = document.getElementById('name').value;
+        const code = document.getElementById('code').value;
+
+        if (!name || !code) {
+            alert("Vui lòng nhập đủ Tên và Mã!");
+            return;
         }
-    </script>
+
+        if (code !== CORRECT_CODE) {
+            alert("Mã vào thi không đúng!");
+            return;
+        }
+
+        // Hiện màn hình thi, ẩn màn hình login
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('quiz-screen').classList.remove('hidden');
+        
+        startTime = new Date().toISOString();
+        
+        // Bắt đầu đếm ngược
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            let m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            let s = (timeLeft % 60).toString().padStart(2, '0');
+            document.getElementById('time-display').innerText = `${m}:${s}`;
+            
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                alert("Hết giờ! Hệ thống tự động nộp bài.");
+                submitExam();
+            }
+        }, 1000);
+    }
+
+    async function submitExam() {
+        const name = document.getElementById('name').value;
+        const code = document.getElementById('code').value;
+        const answers = {
+            "1": document.querySelector('input[name="q1"]:checked')?.value,
+            "2": document.querySelector('input[name="q2"]:checked')?.value
+        };
+
+        const res = await fetch('/submit', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ name, code, answers, start_time: startTime })
+        });
+        
+        const data = await res.json();
+        if(res.ok) {
+            clearInterval(timerInterval);
+            alert(`Nộp bài thành công! Điểm: ${data.score}`);
+            document.body.innerHTML = `<div class="container" style="text-align:center;"><h2>Cảm ơn ${name}!</h2><p>Bài đã nộp lúc ${data.time}.</p></div>`;
+        } else {
+            alert(data.error);
+        }
+    }
+</script>
 </body>
 </html>
