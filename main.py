@@ -7,7 +7,7 @@ import os
 app = FastAPI()
 
 # Cấu hình
-ACCESS_CODE = "12A2" # Mã vào thi, bạn có thể đổi
+ACCESS_CODE = "MaiHuyenDepGai"
 MAX_USERS = 6
 db_submissions = []
 
