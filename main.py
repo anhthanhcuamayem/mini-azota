@@ -7,7 +7,7 @@ import os
 app = FastAPI()
 
 # Cấu hình
-ACCESS_CODE = "MaiHuyenDepGai"
+ACCESS_CODE = "group3laso1"
 MAX_USERS = 6
 db_submissions = []
 
