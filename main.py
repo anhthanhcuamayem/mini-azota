@@ -38,3 +38,12 @@ async def handle_submit(request: Request):
         return new_entry # Trả về để JS nhận được data.score hoặc data.time
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+@app.get("/admin-check-history")
+async def view_history():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            try:
+                return json.load(f)
+            except:
+                return []
+    return []
