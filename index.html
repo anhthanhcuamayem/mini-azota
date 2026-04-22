@@ -3,76 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ thống thi nội bộ - Thầy Hiếu Đẹp Trai</title>
+    <title>Hệ thống thi Nhóm 3</title>
     <style>
         :root { --primary: #4f46e5; --bg: #f8fafc; }
-        body { font-family: sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; }
-        .container { max-width: 600px; width: 100%; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; }
+        .container { max-width: 600px; width: 100%; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         .hidden { display: none; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        button { width: 100%; background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; }
-        .timer-box { font-size: 20px; font-weight: bold; color: #ef4444; text-align: center; margin-bottom: 20px; padding: 10px; background: #fee2e2; border-radius: 8px; }
-        .q-card { border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-        .option { display: block; padding: 10px; background: #f1f5f9; margin: 5px 0; border-radius: 5px; cursor: pointer; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.3s; }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        .timer-box { font-size: 20px; font-weight: bold; color: #ef4444; text-align: center; margin-bottom: 20px; padding: 10px; background: #fee2e2; border-radius: 8px; border: 1px solid #fecaca; }
+        .q-card { border: 1px solid #e2e8f0; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        .option { display: block; padding: 12px; background: #f8fafc; margin: 8px 0; border-radius: 6px; cursor: pointer; border: 1px solid #f1f5f9; }
+        .option:hover { background: #eef2ff; }
+        h2 { text-align: center; color: #1e293b; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div id="login-screen">
-        <h2 style="text-align: center;">VÀO PHÒNG THI</h2>
-        <p style="text-align: center; color: #64748b;">Vui lòng nhập thông tin để bắt đầu</p>
-        <input type="text" id="name" placeholder="Họ và tên của bạn">
-        <input type="text" id="code" placeholder="Mã vào thi (Passcode)">
+        <h2>NHÓM 3 - VÀO PHÒNG THI</h2>
+        <input type="text" id="name" placeholder="Nhập họ và tên bạn">
+        <input type="text" id="code" placeholder="Mã truy cập (group3laso1)">
         <button onclick="startTest()">BẮT ĐẦU LÀM BÀI</button>
     </div>
 
     <div id="quiz-screen" class="hidden">
-        <div class="timer-box">Thời gian còn lại: <span id="time-display">10:00</span></div>
+        <div class="timer-box">⏳ Thời gian: <span id="time-display">10:00</span></div>
         <div id="questions-list">
             <div class="q-card">
-                <p><strong>Câu 1:</strong> k-NN thuộc loại thuật toán nào?</p>
+                <p><strong>Câu 1:</strong> Trong Machine Learning, k-NN được gọi là gì?</p>
                 <label class="option"><input type="radio" name="q1" value="Lazy learner"> Lazy learner</label>
                 <label class="option"><input type="radio" name="q1" value="Eager learner"> Eager learner</label>
             </div>
             <div class="q-card">
-                <p><strong>Câu 2:</strong> LSTM giải quyết vấn đề gì của RNN?</p>
-                <label class="option"><input type="radio" name="q2" value="Vanishing Gradient"> Vanishing Gradient</label>
-                <label class="option"><input type="radio" name="q2" value="Overfitting"> Overfitting</label>
+                <p><strong>Câu 2:</strong> Vấn đề chính mà LSTM giải quyết cho RNN là gì?</p>
+                <label class="option"><input type="radio" name="q2" value="Vanishing Gradient"> Vanishing Gradient (Triệt tiêu đạo hàm)</label>
+                <label class="option"><input type="radio" name="q2" value="Data Augmentation"> Data Augmentation (Tăng cường dữ liệu)</label>
             </div>
         </div>
-        <button onclick="submitExam()">NỘP BÀI</button>
+        <button onclick="submitExam()">NỘP BÀI NGAY</button>
     </div>
 </div>
 
 <script>
-    let timeLeft = 600; // 10 phút tính bằng giây
+    let timeLeft = 600; 
     let timerInterval;
     let startTime;
-    const CORRECT_CODE = "group3laso1"; // Mật khẩu bạn đặt
 
     function startTest() {
-        const name = document.getElementById('name').value;
-        const code = document.getElementById('code').value;
+        const name = document.getElementById('name').value.trim();
+        const code = document.getElementById('code').value.trim().toLowerCase();
 
         if (!name || !code) {
-            alert("Vui lòng nhập đủ Tên và Mã!");
+            alert("Vui lòng điền đầy đủ tên và mã!");
             return;
         }
 
-        if (code !== CORRECT_CODE) {
-            alert("Mã vào thi không đúng!");
-            alert(code," ",CORRECT_CODE);
+        if (code !== "group3laso1") {
+            alert("Mã truy cập sai rồi!");
             return;
         }
 
-        // Hiện màn hình thi, ẩn màn hình login
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('quiz-screen').classList.remove('hidden');
         
         startTime = new Date().toISOString();
         
-        // Bắt đầu đếm ngược
         timerInterval = setInterval(() => {
             timeLeft--;
             let m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
@@ -81,7 +79,7 @@
             
             if (timeLeft <= 0) {
                 clearInterval(timerInterval);
-                alert("Hết giờ! Hệ thống tự động nộp bài.");
+                alert("Hết giờ làm bài!");
                 submitExam();
             }
         }, 1000);
@@ -95,19 +93,28 @@
             "2": document.querySelector('input[name="q2"]:checked')?.value
         };
 
-        const res = await fetch('/submit', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ name, code, answers, start_time: startTime })
-        });
-        
-        const data = await res.json();
-        if(res.ok) {
-            clearInterval(timerInterval);
-            alert(`Nộp bài thành công! Điểm: ${data.score}`);
-            document.body.innerHTML = `<div class="container" style="text-align:center;"><h2>Cảm ơn ${name}!</h2><p>Bài đã nộp lúc ${data.time}.</p></div>`;
-        } else {
-            alert(data.error);
+        try {
+            const res = await fetch('/submit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name, code, answers, start_time: startTime })
+            });
+            
+            const data = await res.json();
+            if(res.ok) {
+                clearInterval(timerInterval);
+                alert(`Nộp thành công! Điểm của bạn: ${data.score}`);
+                document.body.innerHTML = `
+                    <div class="container" style="text-align:center;">
+                        <h2>Cảm ơn ${name}!</h2>
+                        <p>Kết quả đã được lưu lại vào hệ thống của nhóm.</p>
+                        <p>Thời gian nộp: ${data.time}</p>
+                    </div>`;
+            } else {
+                alert(data.error);
+            }
+        } catch (err) {
+            alert("Lỗi kết nối server!");
         }
     }
 </script>
