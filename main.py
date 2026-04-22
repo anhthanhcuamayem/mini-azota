@@ -6,11 +6,12 @@ import os
 
 app = FastAPI()
 
-ACCESS_CODE = "MaiHuyenDepGai"
+# Cấu hình hệ thống
+ACCESS_CODE = "group3laso1"
 MAX_USERS = 6
-DATA_FILE = "history.json" # Tên file sẽ lưu dữ liệu
+DATA_FILE = "history.json"
 
-# Hàm đọc dữ liệu từ file
+# Hàm đọc dữ liệu từ file lưu trữ
 def read_data():
     if not os.path.exists(DATA_FILE):
         return []
@@ -20,7 +21,7 @@ def read_data():
         except:
             return []
 
-# Hàm ghi dữ liệu vào file
+# Hàm ghi dữ liệu vào file lưu trữ
 def save_data(data_list):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data_list, f, ensure_ascii=False, indent=4)
@@ -33,37 +34,39 @@ async def get_home():
 @app.post("/submit")
 async def handle_submit(data: dict):
     submissions = read_data()
-
+    
+    # Kiểm tra số lượng người nộp
     if len(submissions) >= MAX_USERS:
-        return JSONResponse(status_code=403, content={"error": "Hệ thống đã nhận đủ bài."})
+        return JSONResponse(status_code=403, content={"error": "Hệ thống đã nhận đủ 6 người."})
 
-    if data.get("code") != ACCESS_CODE:
-        return JSONResponse(status_code=401, content={"error": "Mã truy cập sai!"})
+    # Kiểm tra mã truy cập (xóa khoảng trắng và không phân biệt hoa thường)
+    user_code = str(data.get("code", "")).strip().lower()
+    if user_code != ACCESS_CODE.lower():
+        return JSONResponse(status_code=401, content={"error": "Mã truy cập không đúng!"})
 
     name = data.get("name")
-    # Kiểm tra xem tên này đã nộp chưa để tránh nộp trùng
-    for s in submissions:
-        if s['name'] == name:
-            return JSONResponse(status_code=400, content={"error": "Bạn đã nộp bài trước đó rồi!"})
-
     ans = data.get("answers", {})
-    start_time = datetime.fromisoformat(data.get("start_time"))
-    end_time = datetime.now()
+    start_time_str = data.get("start_time")
     
-    # Chấm điểm
+    # Tính điểm
     score = 0
     if ans.get("1") == "Lazy learner": score += 1
     if ans.get("2") == "Vanishing Gradient": score += 1
 
+    # Tính thời gian làm bài
+    start_time = datetime.fromisoformat(start_time_str)
+    end_time = datetime.now()
+    duration = str(end_time - start_time).split(".")[0]
+
     new_submission = {
         "name": name,
         "score": f"{score}/2",
-        "duration": str(end_time - start_time).split(".")[0],
+        "duration": duration,
         "time": end_time.strftime("%H:%M:%S %d/%m/%Y")
     }
     
     submissions.append(new_submission)
-    save_data(submissions) # Lưu lại vào file
+    save_data(submissions)
     return new_submission
 
 @app.get("/admin-check-history")
