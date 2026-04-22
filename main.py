@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
-from datetime import datetime
+from datetime import datetime,timedelta
 import json, os
 
 app = FastAPI()
@@ -24,10 +24,13 @@ async def handle_submit(request: Request):
                 except: submissions = []
 
         # Tạo bản ghi mới
+        now_utc = datetime.utcnow()
+        now_vn = now_utc + timedelta(hours=7) # Cộng thêm 7 tiếng
+        
         new_entry = {
-            "name": data.get("name", "Anonym"),
+            "name": data.get("name", "Ẩn danh"),
             "score": "Đã ghi nhận",
-            "time": datetime.now().strftime("%H:%M:%S %d/%m/%Y")
+            "time": now_vn.strftime("%H:%M:%S %d/%m/%Y") # Sử dụng giờ VN
         }
         submissions.append(new_entry)
 
