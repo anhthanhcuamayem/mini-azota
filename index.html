@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Nhóm 3 - đề thi thử Tiếng Anh THPTQG</title>
+    <title>Nhóm 3 - Thi trắc nghiệm (40 câu - 7 dòng)</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; display: flex; justify-content: center; padding: 20px; }
@@ -35,7 +35,15 @@
         .submit-bottom button:hover { background: #059669; }
         .question-card { animation: fade 0.2s ease; }
         @keyframes fade { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }
-        .question-image { max-width: 100%; max-height: 200px; object-fit: contain; margin-bottom: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block; }
+        /* Ảnh FULL WIDTH chạm 2 bên rìa */
+        .question-image {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
         .q-text { font-size: 1.2rem; font-weight: 600; margin-bottom: 24px; color: #0f172a; }
         .options-list { display: flex; flex-direction: column; gap: 14px; margin: 20px 0 30px; }
         .option-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 20px; padding: 12px 18px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
@@ -102,7 +110,7 @@
 
     <div class="leaderboard-card">
         <h3>🏆 Bảng xếp hạng (Top 3 – mỗi người thành tích tốt nhất)</h3>
-        <table class="leaderboard-table" id="leaderboardTable"><thead><tr><th>#</th><th>Họ tên</th><th>Điểm</th><th>Thời gian</th><tr></thead>
+        <table class="leaderboard-table" id="leaderboardTable"><thead><tr><th>#</th><th>Họ tên</th><th>Điểm</th><th>Thời gian</th></tr></thead>
         <tbody id="leaderboardBody"><tr><td colspan="4" class="loading">Đang tải......</td></tr>
         </tbody>
         </table>
@@ -182,7 +190,7 @@
             });
         } catch (err) {
             console.error("Lỗi tải câu hỏi:", err);
-            // Fallback tạo 40 câu
+            // Fallback tạo 40 câu mặc định
             MASTER_QUESTIONS = [];
             for (let i = 0; i < 40; i++) {
                 MASTER_QUESTIONS.push({
@@ -263,7 +271,6 @@
         if(!checkSubmit()) return;
         if(!sessionId) { alert("Lỗi phiên làm bài!"); return; }
         if(timerInterval) clearInterval(timerInterval);
-        // Gửi mảng câu trả lời
         try {
             const res = await fetch('/submit', {
                 method: 'POST',
@@ -272,7 +279,7 @@
                     name: currentUser,
                     code: "group3laso1",
                     session_id: sessionId,
-                    answers: userAnswers  // array of 40 strings
+                    answers: userAnswers
                 })
             });
             const data = await res.json();
