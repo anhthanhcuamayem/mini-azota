@@ -116,7 +116,7 @@
         .modal-content {
             background: white;
             border-radius: 32px;
-            max-width: 500px;
+            max-width: 550px;
             width: 90%;
             padding: 28px;
             text-align: center;
@@ -137,6 +137,10 @@
         .close-modal {
             background: #4f46e5;
             margin-top: 20px;
+        }
+        .close-modal-secondary {
+            background: #64748b;
+            margin-top: 10px;
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: scale(0.95);}
@@ -164,9 +168,6 @@
             background: #3b82f6;
             margin-top: 10px;
         }
-        .history-item {
-            margin-bottom: 8px;
-        }
         .badge {
             display: inline-block;
             background: #e2e8f0;
@@ -176,6 +177,15 @@
         }
         .text-center {
             text-align: center;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .btn-group button {
+            flex: 1;
+            margin-top: 0;
         }
     </style>
 </head>
@@ -217,30 +227,35 @@
                 <tr><th>#</th><th>Họ tên</th><th>Điểm</th><th>Thời gian</th></tr>
             </thead>
             <tbody id="leaderboardBody">
-                <tr><td colspan="4" class="loading">Đang tải...</td></tr>
+                <tr><td colspan="4" class="loading">Đang tải......</td></tr>
             </tbody>
         </table>
         <button class="refresh-leaderboard" id="refreshLeaderboardBtn">🔄 Làm mới bảng</button>
     </div>
 </div>
 
-<!-- MODAL KẾT QUẢ -->
+<!-- MODAL KẾT QUẢ (sau khi nộp bài) -->
 <div id="resultModal" class="modal">
     <div class="modal-content">
         <h2>✅ HOÀN THÀNH</h2>
         <p>Bài làm của bạn đã được ghi nhận</p>
         <div class="modal-score" id="modalScore">0/2</div>
-        <button class="view-history-btn" id="viewHistoryAfterSubmit" style="margin-top: 10px;">📜 Xem lịch sử của tôi</button>
-        <button class="close-modal" onclick="closeResultModal()">Đóng</button>
+        <div class="btn-group">
+            <button id="viewHistoryFromResultBtn">📜 Xem lịch sử của tôi</button>
+            <button id="closeResultAndReloadBtn">🏠 Về trang chủ</button>
+        </div>
     </div>
 </div>
 
 <!-- MODAL LỊCH SỬ -->
 <div id="historyModal" class="modal">
     <div class="modal-content">
-        <h2>📜 Lịch sử làm bài</h2>
+        <h2>📜 Lịch sử làm bài của bạn</h2>
         <div id="historyContent"></div>
-        <button class="close-modal" onclick="closeHistoryModal()">Đóng</button>
+        <div class="btn-group">
+            <button id="closeHistoryBtn">Đóng</button>
+            <button id="backToHomeFromHistoryBtn">🏠 Về trang chủ</button>
+        </div>
     </div>
 </div>
 
@@ -278,7 +293,7 @@
             const historyContent = document.getElementById('historyContent');
             
             if (!history.length) {
-                historyContent.innerHTML = '<p class="text-center">Chưa có lịch sử làm bài</p>';
+                historyContent.innerHTML = '<p class="text-center">📭 Chưa có lịch sử làm bài</p>';
                 return;
             }
             
@@ -296,7 +311,7 @@
             html += '</tbody></table>';
             historyContent.innerHTML = html;
         } catch(e) {
-            document.getElementById('historyContent').innerHTML = '<p class="text-center">Lỗi tải lịch sử</p>';
+            document.getElementById('historyContent').innerHTML = '<p class="text-center">❌ Lỗi tải lịch sử</p>';
         }
     }
 
@@ -310,27 +325,34 @@
         });
     }
 
+    // Hiện modal kết quả
     function showResultModal(score, name) {
-        const modal = document.getElementById('resultModal');
         document.getElementById('modalScore').innerText = `${score}/2`;
         lastSubmittedName = name;
-        modal.style.display = 'flex';
+        document.getElementById('resultModal').style.display = 'flex';
     }
 
-    function closeResultModal() {
+    // Đóng modal kết quả và reload về trang chủ (bắt đầu lại)
+    function closeResultAndReload() {
         document.getElementById('resultModal').style.display = 'none';
-        loadLeaderboard();
         location.reload();
     }
 
+    // Hiện modal lịch sử
     function showHistoryModal(name) {
-        const modal = document.getElementById('historyModal');
         loadUserHistory(name);
-        modal.style.display = 'flex';
+        document.getElementById('historyModal').style.display = 'flex';
     }
 
+    // Đóng modal lịch sử (không reload)
     function closeHistoryModal() {
         document.getElementById('historyModal').style.display = 'none';
+    }
+
+    // Đóng lịch sử và reload về trang chủ
+    function closeHistoryAndReload() {
+        document.getElementById('historyModal').style.display = 'none';
+        location.reload();
     }
 
     function checkAllQuestionsAnswered() {
@@ -417,12 +439,19 @@
     document.getElementById('startExamBtn').addEventListener('click', startTest);
     document.getElementById('submitExam').addEventListener('click', submitExam);
     document.getElementById('refreshLeaderboardBtn').addEventListener('click', loadLeaderboard);
-    document.getElementById('viewHistoryAfterSubmit').addEventListener('click', () => {
+    
+    // Modal kết quả
+    document.getElementById('viewHistoryFromResultBtn').addEventListener('click', () => {
         if (lastSubmittedName) {
-            closeResultModal();
+            document.getElementById('resultModal').style.display = 'none';
             showHistoryModal(lastSubmittedName);
         }
     });
+    document.getElementById('closeResultAndReloadBtn').addEventListener('click', closeResultAndReload);
+    
+    // Modal lịch sử
+    document.getElementById('closeHistoryBtn').addEventListener('click', closeHistoryModal);
+    document.getElementById('backToHomeFromHistoryBtn').addEventListener('click', closeHistoryAndReload);
 
     loadLeaderboard();
 </script>
