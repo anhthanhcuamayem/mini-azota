@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Nhóm 3 - Thi trắc nghiệm (Đảo câu & đáp án)</title>
+    <title>Nhóm 3 - Thi trắc nghiệm (7 dòng txt)</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; display: flex; justify-content: center; padding: 20px; }
@@ -35,12 +35,12 @@
         .submit-bottom button:hover { background: #059669; }
         .question-card { animation: fade 0.2s ease; }
         @keyframes fade { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }
+        .question-image { max-width: 100%; max-height: 200px; object-fit: contain; margin-bottom: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block; }
         .q-text { font-size: 1.2rem; font-weight: 600; margin-bottom: 24px; color: #0f172a; }
         .options-list { display: flex; flex-direction: column; gap: 14px; margin: 20px 0 30px; }
         .option-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 20px; padding: 12px 18px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
         .option-item.selected { background: #eef2ff; border-color: #4f46e5; }
         .option-radio { width: 18px; height: 18px; accent-color: #4f46e5; }
-        .placeholder-message { background: #fef9c3; border-left: 4px solid #eab308; padding: 16px; border-radius: 16px; color: #854d0e; margin: 20px 0; }
         .nav-buttons { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
         .nav-btn { background: white; border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; }
         .leaderboard-card { background: white; border-radius: 28px; box-shadow: 0 8px 20px rgba(0,0,0,0.05); padding: 24px 28px; }
@@ -65,7 +65,7 @@
 <div class="main-container">
     <div class="card" id="loginCard">
         <div class="login-area">
-            <h2>📚 NHÓM 3 - PHÒNG THI (ĐẢO CÂU & ĐÁP ÁN)</h2>
+            <h2>📚 NHÓM 3 - PHÒNG THI (40 CÂU - 7 DÒNG)</h2>
             <input type="text" id="fullname" placeholder="Họ và tên" maxlength="50">
             <input type="text" id="accessCode" placeholder="Mã (group3laso1)">
             <button id="startExamBtn">BẮT ĐẦU</button>
@@ -102,74 +102,23 @@
 
     <div class="leaderboard-card">
         <h3>🏆 Bảng xếp hạng (Top 3 – mỗi người thành tích tốt nhất)</h3>
-        <table class="leaderboard-table" id="leaderboardTable"><thead><tr><th>#</th><th>Họ tên</th><th>Điểm</th><th>Thời gian</th></tr></thead>
-        <tbody id="leaderboardBody"><tr><td colspan="4" class="loading">Đang tải...</td></tr></tbody></table>
+        <table class="leaderboard-table" id="leaderboardTable"><thead><tr><th>#</th><th>Họ tên</th><th>Điểm</th><th>Thời gian</th><tr></thead>
+        <tbody id="leaderboardBody"><tr><td colspan="4" class="loading">Đang tải......</td></tr>
+        </tbody>
+        </table>
         <button class="refresh-leaderboard" id="refreshLeaderboardBtn">🔄 Làm mới bảng</button>
     </div>
 </div>
 
-<div id="resultModal" class="modal"><div class="modal-content"><h2>✅ HOÀN THÀNH</h2><p>Bài làm đã được ghi nhận</p><div class="modal-score" id="modalScore">0/2</div><div class="btn-group"><button id="viewHistoryFromResultBtn">📜 Lịch sử của tôi</button><button id="closeResultAndReloadBtn">🏠 Về trang chủ</button></div></div></div>
+<div id="resultModal" class="modal"><div class="modal-content"><h2>✅ HOÀN THÀNH</h2><p>Bài làm đã được ghi nhận</p><div class="modal-score" id="modalScore">0/40</div><div class="btn-group"><button id="viewHistoryFromResultBtn">📜 Lịch sử của tôi</button><button id="closeResultAndReloadBtn">🏠 Về trang chủ</button></div></div></div>
 <div id="historyModal" class="modal"><div class="modal-content"><h2>📜 Lịch sử làm bài</h2><div id="historyContent"></div><div class="btn-group"><button id="closeHistoryBtn">Đóng</button><button id="backToHomeFromHistoryBtn">🏠 Về trang chủ</button></div></div></div>
 <div id="resumeModal" class="modal"><div class="modal-content"><h2>⚠️ Bài làm chưa hoàn thành</h2><p>Bạn có muốn tiếp tục bài làm dang dở?</p><div class="btn-group"><button id="resumeYesBtn">Tiếp tục</button><button id="resumeNoBtn">Bắt đầu mới</button></div></div></div>
 
 <script>
-    // ----- DANH SÁCH CÂU HỎI GỐC (có id) -----
-    const MASTER_QUESTIONS = [];
-    // Câu 0: k-NN
-    MASTER_QUESTIONS.push({
-        id: 0,
-        text: "Trong Machine Learning, k-NN là gì?",
-        options: ["Lazy learner", "Eager learner"],
-        isActive: true,
-        correctValue: "Lazy learner"
-    });
-    // Câu 1: RNN
-    MASTER_QUESTIONS.push({
-        id: 1,
-        text: "RNN thường bị lỗi gì?",
-        options: ["Vanishing Gradient", "Data Augmentation"],
-        isActive: true,
-        correctValue: "Vanishing Gradient"
-    });
-    // Các câu placeholder (id từ 2 đến 39)
-    for (let i = 2; i < 40; i++) {
-        MASTER_QUESTIONS.push({
-            id: i,
-            text: "Câu hỏi đang được cập nhật",
-            options: [],
-            isActive: false,
-            placeholder: "📘 Nội dung câu hỏi sẽ sớm được bổ sung.",
-            correctValue: null
-        });
-    }
-
-    // Hàm shuffle mảng (Fisher-Yates)
-    function shuffleArray(arr) {
-        for (let i = arr.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [arr[i], arr[j]] = [arr[j], arr[i]];
-        }
-        return arr;
-    }
-
-    // Hàm tạo bản sao câu hỏi đã được đảo thứ tự và đảo lựa chọn
-    function getShuffledQuestions() {
-        // 1. Shuffle toàn bộ danh sách câu hỏi
-        let shuffled = shuffleArray([...MASTER_QUESTIONS]);
-        // 2. Với mỗi câu active, shuffle options (giữ nguyên giá trị đúng)
-        shuffled = shuffled.map(q => {
-            if (q.isActive && q.options && q.options.length) {
-                const shuffledOpts = shuffleArray([...q.options]);
-                return { ...q, options: shuffledOpts };
-            }
-            return { ...q };
-        });
-        return shuffled;
-    }
-
-    // ----- BIẾN TOÀN CỤC -----
-    let currentQuestions = [];         // Mảng câu hỏi đã shuffle (dùng trong bài thi)
-    let userAnswers = [];             // Mảng câu trả lời (theo index của currentQuestions)
+    // ---- Biến toàn cục ----
+    let MASTER_QUESTIONS = [];
+    let currentQuestions = [];
+    let userAnswers = [];        // mảng 40 câu trả lời (text)
     let currentIndex = 0;
     let timerInterval = null;
     let timeLeftSeconds = 90 * 60;
@@ -178,7 +127,6 @@
     let lastSubmittedName = "";
     let startTimeISO = null;
     let examDurationMin = 90;
-    let TOTAL_SCORE_QS = 2;           // vẫn là 2 câu được tính điểm
 
     // DOM
     const loginCard = document.getElementById('loginCard');
@@ -205,7 +153,49 @@
     function saveLastSubmittedName(name) { localStorage.setItem('lastSubmittedName', name); }
     function getLastSubmittedName() { return localStorage.getItem('lastSubmittedName') || ''; }
 
-    // Render palette & câu hỏi
+    function shuffleArray(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+
+    function getShuffledQuestions() {
+        let shuffled = shuffleArray([...MASTER_QUESTIONS]);
+        shuffled = shuffled.map(q => {
+            if (q.options && q.options.length) {
+                const shuffledOpts = shuffleArray([...q.options]);
+                return { ...q, options: shuffledOpts };
+            }
+            return { ...q };
+        });
+        return shuffled;
+    }
+
+    async function loadQuestionsFromServer() {
+        try {
+            const res = await fetch('/get-questions');
+            const data = await res.json(); // [{text, imageUrl, options, correctText}]
+            MASTER_QUESTIONS = data.map((q, idx) => {
+                return {
+                    id: idx,
+                    text: q.text,
+                    imageUrl: q.imageUrl,
+                    options: q.options,
+                    correctText: q.correctText
+                };
+            });
+        } catch (err) {
+            console.error("Lỗi tải câu hỏi:", err);
+            // Fallback tạo 40 câu
+            MASTER_QUESTIONS = [];
+            for (let i = 0; i < 40; i++) {
+                MASTER_QUESTIONS.push({
+                    id: i,
+                    text: `Câu hỏi mẫu ${i+1}`,
+                    imageUrl: "",
+                    options: ["A", "B", "C", "D"],
+                    correctText: "A"
+                });
+            }
+        }
+    }
+
     function renderPalette() {
         paletteContainer.innerHTML = '';
         for(let i=0; i<currentQuestions.length; i++) {
@@ -214,8 +204,7 @@
             btn.innerText = i+1;
             if(userAnswers[i] !== null && userAnswers[i] !== "") btn.classList.add('answered');
             if(currentIndex === i) btn.classList.add('current');
-            if(!currentQuestions[i].isActive) btn.classList.add('disabled');
-            btn.addEventListener('click', (idx=>()=>{ if(currentQuestions[idx].isActive) goToQuestion(idx); else alert("Câu chưa có nội dung."); })(i));
+            btn.addEventListener('click', (idx=>()=>{ goToQuestion(idx); })(i));
             paletteContainer.appendChild(btn);
         }
     }
@@ -225,61 +214,66 @@
     function renderCurrentQuestion() {
         const q = currentQuestions[currentIndex];
         if(!q) return;
-        let html = `<div class="q-text">Câu ${currentIndex+1}: ${escapeHtml(q.text)}</div>`;
-        if(q.isActive) {
-            html += `<div class="options-list" id="optionsList">`;
-            q.options.forEach(opt => {
-                const isChecked = (userAnswers[currentIndex] === opt);
-                html += `<div class="option-item ${isChecked ? 'selected' : ''}"><input type="radio" name="questionOption" value="${escapeHtml(opt)}" ${isChecked ? 'checked' : ''} class="option-radio"><span class="option-label">${escapeHtml(opt)}</span></div>`;
-            });
-            html += `</div>`;
-        } else {
-            html += `<div class="placeholder-message">⚠️ ${escapeHtml(q.placeholder || 'Nội dung đang cập nhật')}</div>`;
+        let html = '';
+        if(q.imageUrl && q.imageUrl.trim() !== "") {
+            html += `<img src="${escapeHtml(q.imageUrl)}" alt="Hình minh họa" class="question-image" onerror="this.style.display='none'">`;
         }
+        html += `<div class="q-text">Câu ${currentIndex+1}: ${escapeHtml(q.text)}</div>`;
+        html += `<div class="options-list" id="optionsList">`;
+        const labels = ['A', 'B', 'C', 'D'];
+        q.options.forEach((opt, optIdx) => {
+            const isChecked = (userAnswers[currentIndex] === opt);
+            const label = labels[optIdx];
+            html += `<div class="option-item ${isChecked ? 'selected' : ''}">
+                        <input type="radio" name="questionOption" value="${escapeHtml(opt)}" ${isChecked ? 'checked' : ''} class="option-radio">
+                        <span class="option-label"><strong>${label}.</strong> ${escapeHtml(opt)}</span>
+                     </div>`;
+        });
+        html += `</div>`;
         dynamicQuestionDiv.innerHTML = html;
-        if(q.isActive) {
-            const radioInputs = document.querySelectorAll('input[name="questionOption"]');
-            const optionDivs = document.querySelectorAll('.option-item');
-            const updateAnswer = (selectedVal) => {
-                userAnswers[currentIndex] = selectedVal;
-                renderPalette();
-                optionDivs.forEach(div => { const radio = div.querySelector('input[type="radio"]'); if(radio && radio.value===selectedVal) div.classList.add('selected'); else div.classList.remove('selected'); });
-                saveToLocalStorage();
-            };
-            radioInputs.forEach(radio => radio.addEventListener('change', e => { if(radio.checked) updateAnswer(radio.value); }));
-            optionDivs.forEach(div => { div.addEventListener('click', e => { const radio = div.querySelector('input[type="radio"]'); if(radio && !radio.checked) { radio.checked = true; updateAnswer(radio.value); } }); });
-        }
+        const radioInputs = document.querySelectorAll('input[name="questionOption"]');
+        const optionDivs = document.querySelectorAll('.option-item');
+        const updateAnswer = (selectedVal) => {
+            userAnswers[currentIndex] = selectedVal;
+            renderPalette();
+            optionDivs.forEach(div => { const radio = div.querySelector('input[type="radio"]'); if(radio && radio.value===selectedVal) div.classList.add('selected'); else div.classList.remove('selected'); });
+            saveToLocalStorage();
+        };
+        radioInputs.forEach(radio => radio.addEventListener('change', e => { if(radio.checked) updateAnswer(radio.value); }));
+        optionDivs.forEach(div => { div.addEventListener('click', e => { const radio = div.querySelector('input[type="radio"]'); if(radio && !radio.checked) { radio.checked = true; updateAnswer(radio.value); } }); });
     }
 
-    function checkAllQuestionsAnswered() {
-        for(let i=0; i<currentQuestions.length; i++) {
-            if(currentQuestions[i].isActive && (!userAnswers[i] || userAnswers[i]==="")) {
-                document.getElementById('submitError').innerText = "❌ Bạn chưa trả lời tất cả câu hỏi!";
-                return false;
-            }
+    function allQuestionsAnswered() {
+        for(let i=0; i<userAnswers.length; i++) {
+            if(!userAnswers[i] || userAnswers[i] === "") return false;
+        }
+        return true;
+    }
+
+    function checkSubmit() {
+        if(!allQuestionsAnswered()) {
+            document.getElementById('submitError').innerText = "❌ Bạn chưa trả lời tất cả 40 câu hỏi!";
+            return false;
         }
         document.getElementById('submitError').innerText = "";
         return true;
     }
 
     async function submitExam() {
-        if(!checkAllQuestionsAnswered()) return;
+        if(!checkSubmit()) return;
         if(!sessionId) { alert("Lỗi phiên làm bài!"); return; }
         if(timerInterval) clearInterval(timerInterval);
-        // Lấy đáp án cho câu có id = 0 (k-NN) và id = 1 (RNN) từ currentQuestions
-        let answerQ1 = null, answerQ2 = null;
-        for(let i=0; i<currentQuestions.length; i++) {
-            const q = currentQuestions[i];
-            if(q.id === 0) answerQ1 = userAnswers[i];
-            if(q.id === 1) answerQ2 = userAnswers[i];
-        }
-        if(!answerQ1 || !answerQ2) { alert("Lỗi: Không tìm thấy câu hỏi chính!"); return; }
-        const answersForApi = { q1: answerQ1, q2: answerQ2 };
+        // Gửi mảng câu trả lời
         try {
             const res = await fetch('/submit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: currentUser, code: "group3laso1", session_id: sessionId, answers: answersForApi })
+                body: JSON.stringify({
+                    name: currentUser,
+                    code: "group3laso1",
+                    session_id: sessionId,
+                    answers: userAnswers  // array of 40 strings
+                })
             });
             const data = await res.json();
             if(res.ok) {
@@ -305,16 +299,15 @@
         currentUser = name;
         studentNameSpan.innerText = `👤 ${escapeHtml(currentUser)}`;
         try {
+            if(MASTER_QUESTIONS.length === 0) await loadQuestionsFromServer();
             const res = await fetch('/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, code }) });
             const data = await res.json();
             if(res.ok) {
                 sessionId = data.session_id;
                 startTimeISO = data.start_time;
                 examDurationMin = data.duration_minutes;
-                TOTAL_SCORE_QS = data.total_questions;
                 timeLeftSeconds = computeTimeLeft();
                 if(timeLeftSeconds <= 0) { alert("Thời gian làm bài đã hết!"); return; }
-                // Tạo bộ câu hỏi đã được đảo thứ tự và đảo đáp án
                 currentQuestions = getShuffledQuestions();
                 userAnswers = new Array(currentQuestions.length).fill(null);
                 currentIndex = 0;
@@ -335,7 +328,7 @@
             const data = await res.json();
             const tbody = document.getElementById('leaderboardBody');
             const leaderboard = data.leaderboard || [];
-            const totalQs = data.total_questions || 2;
+            const totalQs = data.total_questions || 40;
             if(!leaderboard.length) { tbody.innerHTML = '<tr><td colspan="4">Chưa có dữ liệu</td></tr>'; return; }
             tbody.innerHTML = leaderboard.map((item,idx)=>`<tr><td>${idx+1}</td><td>${escapeHtml(item.name)}</td><td><strong>${item.score}/${totalQs}</strong></td><td>${escapeHtml(item.duration_formatted)}</td></tr>`).join('');
         } catch(e) { console.error(e); }
@@ -349,7 +342,7 @@
             if(!history.length) { historyContent.innerHTML = '<p class="text-center">📭 Chưa có lịch sử làm bài</p>'; return; }
             let html = '<table class="history-table"><thead><tr><th>Lần</th><th>Điểm</th><th>Thời gian làm</th><th>Ngày nộp</th></tr></thead><tbody>';
             history.forEach((item,idx)=>{
-                const total = item.score_display ? item.score_display.split('/')[1] : '2';
+                const total = item.score_display ? item.score_display.split('/')[1] : '40';
                 html += `<tr><td>${idx+1}</td><td><strong>${item.score}/${total}</strong></td><td>${escapeHtml(item.duration_formatted)}</td><td>${escapeHtml(item.submitted_at_display)}</td></tr>`;
             });
             html += '</tbody></table>';
@@ -370,7 +363,7 @@
         timeLeftSeconds = state.timeLeftSeconds;
         startTimeISO = state.startTimeISO;
         examDurationMin = state.examDurationMin;
-        currentQuestions = state.currentQuestions;  // giữ nguyên thứ tự cũ khi tiếp tục
+        currentQuestions = state.currentQuestions;
         studentNameSpan.innerText = `👤 ${escapeHtml(currentUser)}`;
         loginCard.style.display = 'none';
         examContainer.style.display = 'block';
@@ -383,9 +376,10 @@
     }
     function startNewExam() { clearLocalStorage(); location.reload(); }
 
-    function init() {
+    async function init() {
         const prevName = getLastSubmittedName();
         if(prevName) document.getElementById('fullname').value = prevName;
+        await loadQuestionsFromServer();
         loadLeaderboard();
         const savedState = loadFromLocalStorage();
         if(savedState && savedState.sessionId && savedState.currentUser && savedState.currentQuestions) {
@@ -395,7 +389,6 @@
         }
     }
 
-    // Gán sự kiện
     document.getElementById('startExamBtn').onclick = startTest;
     document.getElementById('refreshLeaderboardBtn').onclick = loadLeaderboard;
     prevBtn.onclick = () => goToQuestion(currentIndex-1);
@@ -405,6 +398,7 @@
     document.getElementById('closeResultAndReloadBtn').onclick = closeResultAndReload;
     document.getElementById('closeHistoryBtn').onclick = closeHistoryModal;
     document.getElementById('backToHomeFromHistoryBtn').onclick = closeHistoryAndReload;
+
     init();
 </script>
 </body>
