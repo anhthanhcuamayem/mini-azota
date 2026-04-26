@@ -18,7 +18,7 @@
             padding: 30px 20px;
         }
         .main-container {
-            max-width: 800px;
+            max-width: 900px;
             width: 100%;
         }
         .card {
@@ -85,16 +85,17 @@
             margin-top: 20px;
             background: #10b981;
         }
-        .leaderboard-table {
+        .leaderboard-table, .history-table {
             width: 100%;
             border-collapse: collapse;
         }
-        .leaderboard-table th, .leaderboard-table td {
+        .leaderboard-table th, .leaderboard-table td,
+        .history-table th, .history-table td {
             padding: 12px;
             text-align: left;
             border-bottom: 1px solid #e2e8f0;
         }
-        .leaderboard-table th {
+        .leaderboard-table th, .history-table th {
             background: #f1f5f9;
             font-weight: 600;
         }
@@ -115,12 +116,14 @@
         .modal-content {
             background: white;
             border-radius: 32px;
-            max-width: 360px;
+            max-width: 500px;
             width: 90%;
             padding: 28px;
             text-align: center;
             box-shadow: 0 20px 35px rgba(0,0,0,0.2);
             animation: fadeIn 0.2s ease;
+            max-height: 80vh;
+            overflow-y: auto;
         }
         .modal-content h2 {
             color: #10b981;
@@ -156,6 +159,23 @@
             text-align: center;
             color: #64748b;
             padding: 20px;
+        }
+        .view-history-btn {
+            background: #3b82f6;
+            margin-top: 10px;
+        }
+        .history-item {
+            margin-bottom: 8px;
+        }
+        .badge {
+            display: inline-block;
+            background: #e2e8f0;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+        }
+        .text-center {
+            text-align: center;
         }
     </style>
 </head>
@@ -210,13 +230,24 @@
         <h2>✅ HOÀN THÀNH</h2>
         <p>Bài làm của bạn đã được ghi nhận</p>
         <div class="modal-score" id="modalScore">0/2</div>
-        <button class="close-modal" onclick="closeModal()">Đóng</button>
+        <button class="view-history-btn" id="viewHistoryAfterSubmit" style="margin-top: 10px;">📜 Xem lịch sử của tôi</button>
+        <button class="close-modal" onclick="closeResultModal()">Đóng</button>
+    </div>
+</div>
+
+<!-- MODAL LỊCH SỬ -->
+<div id="historyModal" class="modal">
+    <div class="modal-content">
+        <h2>📜 Lịch sử làm bài</h2>
+        <div id="historyContent"></div>
+        <button class="close-modal" onclick="closeHistoryModal()">Đóng</button>
     </div>
 </div>
 
 <script>
     let sessionId = null;
     let currentUser = "";
+    let lastSubmittedName = "";
 
     async function loadLeaderboard() {
         try {
@@ -240,6 +271,35 @@
         }
     }
 
+    async function loadUserHistory(name) {
+        try {
+            const res = await fetch(`/history/${encodeURIComponent(name)}`);
+            const history = await res.json();
+            const historyContent = document.getElementById('historyContent');
+            
+            if (!history.length) {
+                historyContent.innerHTML = '<p class="text-center">Chưa có lịch sử làm bài</p>';
+                return;
+            }
+            
+            let html = '<table class="history-table"><thead><tr><th>Lần</th><th>Điểm</th><th>Thời gian làm</th><th>Ngày nộp</th></tr></thead><tbody>';
+            history.forEach((item, idx) => {
+                html += `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td><strong>${item.score}/2</strong></td>
+                        <td>${item.duration_formatted}</td>
+                        <td>${item.submitted_at}</td>
+                    </tr>
+                `;
+            });
+            html += '</tbody></table>';
+            historyContent.innerHTML = html;
+        } catch(e) {
+            document.getElementById('historyContent').innerHTML = '<p class="text-center">Lỗi tải lịch sử</p>';
+        }
+    }
+
     function escapeHtml(str) {
         if(!str) return '';
         return str.replace(/[&<>]/g, function(m) {
@@ -250,16 +310,27 @@
         });
     }
 
-    function showModal(score) {
+    function showResultModal(score, name) {
         const modal = document.getElementById('resultModal');
         document.getElementById('modalScore').innerText = `${score}/2`;
+        lastSubmittedName = name;
         modal.style.display = 'flex';
     }
 
-    window.closeModal = function() {
+    function closeResultModal() {
         document.getElementById('resultModal').style.display = 'none';
         loadLeaderboard();
         location.reload();
+    }
+
+    function showHistoryModal(name) {
+        const modal = document.getElementById('historyModal');
+        loadUserHistory(name);
+        modal.style.display = 'flex';
+    }
+
+    function closeHistoryModal() {
+        document.getElementById('historyModal').style.display = 'none';
     }
 
     function checkAllQuestionsAnswered() {
@@ -299,7 +370,7 @@
             });
             const data = await res.json();
             if (res.ok) {
-                showModal(data.score);
+                showResultModal(data.score, data.name);
                 loadLeaderboard();
             } else {
                 alert("Lỗi: " + (data.error || "Không thể nộp bài"));
@@ -320,7 +391,6 @@
         
         currentUser = name;
         
-        // Gọi server để bắt đầu phiên làm bài
         try {
             const res = await fetch('/start', {
                 method: 'POST',
@@ -343,9 +413,16 @@
         }
     }
 
+    // Event listeners
     document.getElementById('startExamBtn').addEventListener('click', startTest);
     document.getElementById('submitExam').addEventListener('click', submitExam);
     document.getElementById('refreshLeaderboardBtn').addEventListener('click', loadLeaderboard);
+    document.getElementById('viewHistoryAfterSubmit').addEventListener('click', () => {
+        if (lastSubmittedName) {
+            closeResultModal();
+            showHistoryModal(lastSubmittedName);
+        }
+    });
 
     loadLeaderboard();
 </script>
