@@ -2,534 +2,346 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Hệ thống thi Nhóm 3</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nhóm 3 - Thi trắc nghiệm</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
-            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            font-family: 'Segoe UI', Roboto, sans-serif;
             background: #f1f5f9;
             display: flex;
             justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
+            padding: 30px 20px;
         }
-
-        /* Main container */
-        .exam-container {
-            max-width: 1400px;
+        .main-container {
+            max-width: 800px;
             width: 100%;
+        }
+        .card {
             background: white;
             border-radius: 28px;
-            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.15);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Header */
-        .exam-header {
-            background: #1e293b;
-            color: white;
-            padding: 16px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-        .exam-header h2 {
-            font-weight: 600;
-            font-size: 1.35rem;
-            letter-spacing: -0.2px;
-        }
-        .student-info {
-            background: #0f172a;
-            padding: 6px 14px;
-            border-radius: 40px;
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-
-        /* Two column layout */
-        .exam-layout {
-            display: flex;
-            flex-wrap: wrap;
-        }
-        .question-area {
-            flex: 2.5;
-            background: #ffffff;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
             padding: 28px 30px;
-            min-width: 260px;
+            margin-bottom: 30px;
         }
-        .sidebar {
-            flex: 1.2;
-            background: #f8fafc;
-            border-left: 1px solid #e2e8f0;
-            padding: 28px 20px;
-            min-width: 240px;
-        }
-
-        /* Timer card */
-        .timer-card {
-            background: white;
-            border-radius: 24px;
-            padding: 20px 16px;
+        .login-area {
             text-align: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-            border: 1px solid #e2e8f0;
-            margin-bottom: 32px;
         }
-        .timer-label {
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #475569;
-            font-weight: 600;
-        }
-        .timer-value {
-            font-size: 2.8rem;
-            font-weight: 700;
-            font-family: monospace;
-            color: #0f172a;
-            line-height: 1.2;
-        }
-        /* Question palette */
-        .palette-title {
-            font-weight: 700;
-            margin-bottom: 18px;
-            font-size: 1.1rem;
-            border-left: 4px solid #4f46e5;
-            padding-left: 12px;
-        }
-        .question-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 12px;
-            margin-top: 12px;
-        }
-        .q-num-btn {
-            background: white;
+        input {
+            width: 100%;
+            padding: 14px;
+            margin: 12px 0;
             border: 1px solid #cbd5e1;
             border-radius: 40px;
-            padding: 10px 0;
-            text-align: center;
-            font-weight: 600;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            color: #1e293b;
-        }
-        .q-num-btn.answered {
-            background: #22c55e;
-            border-color: #22c55e;
-            color: white;
-        }
-        .q-num-btn.current {
-            background: #4f46e5;
-            border-color: #4f46e5;
-            color: white;
-            box-shadow: 0 4px 8px rgba(79,70,229,0.3);
-            transform: scale(1.02);
-        }
-        .q-num-btn.disabled {
-            opacity: 0.5;
-            background: #e2e8f0;
-            cursor: not-allowed;
-        }
-        .q-num-btn:not(.disabled):hover {
-            background: #e0e7ff;
-            border-color: #818cf8;
-        }
-
-        /* Question card */
-        .question-card {
-            animation: fade 0.2s ease;
-        }
-        @keyframes fade {
-            from { opacity: 0; transform: translateX(8px);}
-            to { opacity: 1; transform: translateX(0);}
-        }
-        .q-text {
-            font-size: 1.4rem;
-            font-weight: 600;
-            margin-bottom: 28px;
-            line-height: 1.4;
-            color: #0f172a;
-        }
-        .options-list {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            margin: 24px 0 32px;
-        }
-        .option-item {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 20px;
-            padding: 14px 20px;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            cursor: pointer;
-            transition: 0.1s;
-        }
-        .option-item.selected {
-            background: #eef2ff;
-            border-color: #4f46e5;
-        }
-        .option-radio {
-            width: 20px;
-            height: 20px;
-            accent-color: #4f46e5;
-        }
-        .option-label {
             font-size: 1rem;
-            font-weight: 500;
-            color: #1e293b;
         }
-        .placeholder-message {
-            background: #fef9c3;
-            border-left: 4px solid #eab308;
-            padding: 20px;
-            border-radius: 20px;
-            color: #854d0e;
-            font-weight: 500;
-            margin: 20px 0;
-        }
-        .nav-buttons {
-            display: flex;
-            gap: 16px;
-            margin-top: 30px;
-            flex-wrap: wrap;
-        }
-        .nav-btn {
-            background: white;
-            border: 1px solid #cbd5e1;
-            padding: 12px 24px;
+        button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 14px;
             border-radius: 40px;
-            font-weight: 600;
+            font-weight: bold;
+            font-size: 1rem;
             cursor: pointer;
+            width: 100%;
             transition: 0.2s;
         }
-        .nav-btn.primary {
-            background: #4f46e5;
-            border-color: #4f46e5;
-            color: white;
-        }
-        .nav-btn:hover {
-            background: #e2e8f0;
-        }
-        .nav-btn.primary:hover {
+        button:hover {
             background: #4338ca;
         }
-        hr {
-            margin: 20px 0;
-            border-color: #eef2ff;
+        .quiz-card {
+            display: none;
         }
-        footer {
-            font-size: 0.7rem;
-            text-align: center;
-            padding: 16px;
+        .question-item {
+            margin-bottom: 28px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .question-text {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+        }
+        .option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px;
+            margin: 6px 0;
+            background: #f8fafc;
+            border-radius: 40px;
+            cursor: pointer;
+        }
+        .option input {
+            width: auto;
+            margin: 0;
+        }
+        .submit-btn {
+            margin-top: 20px;
+            background: #10b981;
+        }
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .leaderboard-table th, .leaderboard-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .leaderboard-table th {
             background: #f1f5f9;
-            color: #475569;
+            font-weight: 600;
         }
-        @media (max-width: 780px) {
-            .exam-layout { flex-direction: column; }
-            .sidebar { border-left: none; border-top: 1px solid #e2e8f0; }
-            .question-area { padding: 20px; }
-            .q-text { font-size: 1.2rem; }
+        h3 {
+            margin-bottom: 16px;
+            color: #0f172a;
+        }
+        /* Modal Azota */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 32px;
+            max-width: 360px;
+            width: 90%;
+            padding: 28px;
+            text-align: center;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.2);
+            animation: fadeIn 0.2s ease;
+        }
+        .modal-content h2 {
+            color: #10b981;
+            margin-bottom: 12px;
+        }
+        .modal-score {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin: 16px 0;
+        }
+        .close-modal {
+            background: #4f46e5;
+            margin-top: 20px;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95);}
+            to { opacity: 1; transform: scale(1);}
+        }
+        .error-msg {
+            color: #dc2626;
+            font-size: 0.85rem;
+            margin-top: 8px;
+            text-align: center;
+        }
+        .refresh-leaderboard {
+            background: #e2e8f0;
+            color: #1e293b;
+            margin-top: 12px;
+            font-size: 0.8rem;
+            padding: 8px;
         }
     </style>
 </head>
 <body>
-<div class="exam-container" id="app">
-    <div id="login-screen">
-        <div style="padding: 32px;">
-            <h2 style="margin-bottom: 20px;">NHÓM 3 - PHÒNG THI TRẮC NGHIỆM</h2>
-            <input type="text" id="name" placeholder="Họ và tên" style="width:100%; padding:14px; margin-bottom:16px; border-radius: 40px; border:1px solid #ccc;">
-            <input type="text" id="code" placeholder="Mã (group3laso1)" style="width:100%; padding:14px; margin-bottom:20px; border-radius: 40px; border:1px solid #ccc;">
-            <button id="startBtn" style="background:#4f46e5; color:white; border:none; padding:14px; border-radius: 40px; font-weight:bold; width:100%; cursor:pointer;">BẮT ĐẦU</button>
+<div class="main-container">
+    <!-- KHUNG ĐĂNG NHẬP + THI -->
+    <div class="card" id="loginCard">
+        <div class="login-area">
+            <h2>📚 NHÓM 3 - PHÒNG THI</h2>
+            <input type="text" id="fullname" placeholder="Họ và tên">
+            <input type="text" id="accessCode" placeholder="Mã (group3laso1)">
+            <button id="startExamBtn">BẮT ĐẦU</button>
         </div>
     </div>
 
-    <div id="quiz-screen" style="display: none;">
-        <div class="exam-header">
-            <h2>📝 ĐỀ THI NHÓM 3 (MACHINE LEARNING)</h2>
-            <div class="student-info" id="studentNameDisplay"></div>
-        </div>
-        <div class="exam-layout">
-            <!-- Left: current question -->
-            <div class="question-area" id="questionArea">
-                <div class="question-card" id="dynamicQuestion">
-                    <!-- JS will inject content -->
-                </div>
-                <div class="nav-buttons">
-                    <button class="nav-btn" id="prevBtn">◀ Câu trước</button>
-                    <button class="nav-btn" id="nextBtn">Câu tiếp ▶</button>
-                    <button class="nav-btn primary" id="submitExamBtn">📌 NỘP BÀI</button>
-                </div>
+    <div class="card quiz-card" id="quizCard">
+        <div id="questionsContainer">
+            <!-- Câu 1 -->
+            <div class="question-item" data-qid="1">
+                <div class="question-text">Câu 1: Trong Machine Learning, k-NN là gì?</div>
+                <label class="option"><input type="radio" name="q1" value="Lazy learner"> Lazy learner</label>
+                <label class="option"><input type="radio" name="q1" value="Eager learner"> Eager learner</label>
             </div>
+            <!-- Câu 2 -->
+            <div class="question-item" data-qid="2">
+                <div class="question-text">Câu 2: RNN thường bị lỗi gì?</div>
+                <label class="option"><input type="radio" name="q2" value="Vanishing Gradient"> Vanishing Gradient</label>
+                <label class="option"><input type="radio" name="q2" value="Data Augmentation"> Data Augmentation</label>
+            </div>
+        </div>
+        <button class="submit-btn" id="submitExam">📌 NỘP BÀI</button>
+        <div id="submitError" class="error-msg"></div>
+    </div>
 
-            <!-- Right: timer + palette -->
-            <div class="sidebar">
-                <div class="timer-card">
-                    <div class="timer-label">THỜI GIAN CÒN LẠI</div>
-                    <div class="timer-value" id="timerDisplay">90:00</div>
-                </div>
-                <div class="palette-title">📌 Bảng câu hỏi</div>
-                <div id="questionPaletteGrid" class="question-grid"></div>
-                <hr />
-                <div style="font-size:13px; color:#475569; margin-top: 20px;">
-                    ✅ Xanh lá: Đã trả lời &nbsp;&nbsp;⚪ Xám: Chưa làm<br>
-                    🔵 Xanh dương: Câu hiện tại
-                </div>
-            </div>
-        </div>
-        <footer>Hệ thống Nhóm 3 - Tự động lưu kết quả khi bấm nộp hoặc hết giờ</footer>
+    <!-- BẢNG XẾP HẠNG -->
+    <div class="card">
+        <h3>🏆 Bảng xếp hạng (Top 3 điểm cao nhất)</h3>
+        <table class="leaderboard-table" id="leaderboardTable">
+            <thead>
+                <tr><th>#</th><th>Họ tên</th><th>Điểm</th><th>Thời gian</th></tr>
+            </thead>
+            <tbody id="leaderboardBody">
+                <tr><td colspan="4">Đang tải...</td></tr>
+            </tbody>
+        </table>
+        <button class="refresh-leaderboard" id="refreshLeaderboardBtn">🔄 Làm mới bảng</button>
+    </div>
+</div>
+
+<!-- MODAL KẾT QUẢ (kiểu Azota) -->
+<div id="resultModal" class="modal">
+    <div class="modal-content">
+        <h2>✅ HOÀN THÀNH</h2>
+        <p>Bài làm của bạn đã được ghi nhận</p>
+        <div class="modal-score" id="modalScore">0/2</div>
+        <button class="close-modal" onclick="closeModal()">Đóng</button>
     </div>
 </div>
 
 <script>
-    // -------------------- DANH SÁCH CÂU HỎI (40 câu, 2 câu đầu demo) --------------------
-    const TOTAL_QS = 40;
-    // correct answers for scoring (only first 2 considered)
-    const CORRECT_ANSWERS = ["Lazy learner", "Vanishing Gradient"];
-    
-    // Build questions array
-    const questions = [];
-    for (let i = 0; i < TOTAL_QS; i++) {
-        if (i === 0) {
-            questions.push({
-                text: "Trong Machine Learning, k-NN là gì?",
-                options: ["Lazy learner", "Eager learner"],
-                isActive: true
-            });
-        } else if (i === 1) {
-            questions.push({
-                text: "RNN thường bị lỗi gì?",
-                options: ["Vanishing Gradient", "Data Augmentation"],
-                isActive: true
-            });
-        } else {
-            questions.push({
-                text: "Câu hỏi đang được cập nhật (Demo)",
-                options: [],
-                isActive: false,
-                placeholder: "📘 Nội dung câu hỏi sẽ sớm được bổ sung."
-            });
-        }
-    }
+    let examStartTime = null;
+    let currentUser = "";
 
-    let userAnswers = new Array(TOTAL_QS).fill(null);   // lưu câu trả lời (string hoặc null)
-    let currentIndex = 0;      // 0-based
-    let timerInterval = null;
-    let timeLeftSeconds = 90 * 60;   // 90 phút = 5400 giây
-    let examStarted = false;
-    let studentName = "";
-
-    // DOM elements
-    const loginDiv = document.getElementById('login-screen');
-    const quizDiv = document.getElementById('quiz-screen');
-    const startButton = document.getElementById('startBtn');
-    const nameInput = document.getElementById('name');
-    const codeInput = document.getElementById('code');
-    const studentNameSpan = document.getElementById('studentNameDisplay');
-    const timerDisplay = document.getElementById('timerDisplay');
-    const paletteContainer = document.getElementById('questionPaletteGrid');
-    const dynamicQuestionDiv = document.getElementById('dynamicQuestion');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const submitBtn = document.getElementById('submitExamBtn');
-
-    // Helper: format mm:ss
-    function formatTime(seconds) {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-
-    // Update timer UI and check expiry
-    function updateTimerDisplay() {
-        timerDisplay.innerText = formatTime(timeLeftSeconds);
-        if (timeLeftSeconds <= 0) {
-            if (timerInterval) clearInterval(timerInterval);
-            alert("Hết thời gian! Hệ thống tự động nộp bài.");
-            submitExam();
-        }
-    }
-
-    function startTimer() {
-        if (timerInterval) clearInterval(timerInterval);
-        timerInterval = setInterval(() => {
-            if (timeLeftSeconds > 0) {
-                timeLeftSeconds--;
-                updateTimerDisplay();
-            } else {
-                clearInterval(timerInterval);
-            }
-        }, 1000);
-    }
-
-    // Render question palette (40 buttons)
-    function renderPalette() {
-        paletteContainer.innerHTML = '';
-        for (let i = 0; i < TOTAL_QS; i++) {
-            const btn = document.createElement('div');
-            btn.classList.add('q-num-btn');
-            btn.innerText = i+1;
-            // answered status: only if answer not null and question is active OR if any string stored
-            if (userAnswers[i] !== null && userAnswers[i] !== "") {
-                btn.classList.add('answered');
-            }
-            if (currentIndex === i) {
-                btn.classList.add('current');
-            }
-            if (!questions[i].isActive) {
-                btn.classList.add('disabled');
-            }
-            btn.addEventListener('click', (function(idx) {
-                return function() { 
-                    if (questions[idx].isActive) {
-                        goToQuestion(idx);
-                    } else {
-                        alert("Câu hỏi này hiện chưa có nội dung, vui lòng chờ cập nhật.");
-                    }
-                };
-            })(i));
-            paletteContainer.appendChild(btn);
-        }
-    }
-
-    // go to specific question and render
-    function goToQuestion(index) {
-        if (index < 0 || index >= TOTAL_QS) return;
-        currentIndex = index;
-        renderCurrentQuestion();
-        renderPalette();   // refresh highlight
-    }
-
-    // render current question + options
-    function renderCurrentQuestion() {
-        const q = questions[currentIndex];
-        if (!q) return;
-        let html = `<div class="q-text">Câu ${currentIndex+1}: ${q.text}</div>`;
-        if (q.isActive) {
-            html += `<div class="options-list" id="optionsList">`;
-            q.options.forEach(opt => {
-                const isChecked = (userAnswers[currentIndex] === opt);
-                const selectedClass = isChecked ? 'selected' : '';
-                html += `
-                    <div class="option-item ${selectedClass}" data-value="${opt.replace(/"/g, '&quot;')}">
-                        <input type="radio" name="questionOption" value="${opt.replace(/"/g, '&quot;')}" ${isChecked ? 'checked' : ''} class="option-radio">
-                        <span class="option-label">${opt}</span>
-                    </div>
-                `;
-            });
-            html += `</div>`;
-        } else {
-            html += `<div class="placeholder-message">⚠️ ${q.placeholder || 'Nội dung đang được xây dựng'}<br><small>Bạn có thể bỏ qua câu này.</small></div>`;
-        }
-        dynamicQuestionDiv.innerHTML = html;
-
-        // attach event listeners for radio and highlight div click
-        if (q.isActive) {
-            const radioInputs = document.querySelectorAll('input[name="questionOption"]');
-            const optionDivs = document.querySelectorAll('.option-item');
-            const updateAnswer = (selectedVal) => {
-                userAnswers[currentIndex] = selectedVal;
-                renderPalette();   // update palette answered status
-                // update highlight style
-                optionDivs.forEach(div => {
-                    const val = div.getAttribute('data-value');
-                    if (val === selectedVal) div.classList.add('selected');
-                    else div.classList.remove('selected');
-                });
-            };
-            radioInputs.forEach(radio => {
-                radio.addEventListener('change', (e) => {
-                    if (radio.checked) updateAnswer(radio.value);
-                });
-            });
-            optionDivs.forEach(div => {
-                div.addEventListener('click', (e) => {
-                    const radio = div.querySelector('input[type="radio"]');
-                    if (radio && !radio.checked) {
-                        radio.checked = true;
-                        updateAnswer(radio.value);
-                    }
-                });
-            });
-        }
-    }
-
-    // submit exam
-    async function submitExam() {
-        if (!examStarted) return;
-        if (timerInterval) clearInterval(timerInterval);
-        // prepare answers array (send full array of 40, null for unanswered)
-        const answersArray = [...userAnswers];
-        const payload = {
-            name: studentName,
-            code: "group3laso1",
-            answers_array: answersArray,
-            start_time: localStorage.getItem('exam_start_time') || new Date().toISOString()
-        };
+    // Helper: fetch leaderboard and render
+    async function loadLeaderboard() {
         try {
-            const response = await fetch('/submit', {
+            const res = await fetch('/leaderboard');
+            const data = await res.json();
+            const tbody = document.getElementById('leaderboardBody');
+            if (!data.length) {
+                tbody.innerHTML = '<tr><td colspan="4">Chưa có dữ liệu</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.map((item, idx) => `
+                <tr>
+                    <td>${idx+1}</td>
+                    <td>${escapeHtml(item.name)}</td>
+                    <td><strong>${item.score}/2</strong></td>
+                    <td>${item.duration_formatted}</td>
+                </tr>
+            `).join('');
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    function escapeHtml(str) {
+        if(!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if(m === '&') return '&amp;';
+            if(m === '<') return '&lt;';
+            if(m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // Modal functions
+    function showModal(score) {
+        const modal = document.getElementById('resultModal');
+        document.getElementById('modalScore').innerText = `${score}/2`;
+        modal.style.display = 'flex';
+    }
+    window.closeModal = function() {
+        document.getElementById('resultModal').style.display = 'none';
+        // Sau khi đóng modal, reload lại trang? Có thể giữ nguyên hoặc reload leaderboard
+        loadLeaderboard();
+        // Reset giao diện về login? (tuỳ chọn, để tiện thi tiếp thì reload luôn)
+        // Để tránh nhập lại, cho phép làm bài mới bằng cách reload trang
+        location.reload();
+    }
+
+    // Kiểm tra tất cả các câu đã được chọn chưa (chỉ 2 câu)
+    function checkAllQuestionsAnswered() {
+        const q1Selected = document.querySelector('input[name="q1"]:checked');
+        const q2Selected = document.querySelector('input[name="q2"]:checked');
+        if (!q1Selected || !q2Selected) {
+            document.getElementById('submitError').innerText = "❌ Bạn chưa trả lời hết câu hỏi. Vui lòng chọn đáp án cho cả 2 câu.";
+            return false;
+        }
+        document.getElementById('submitError').innerText = "";
+        return true;
+    }
+
+    // Nộp bài
+    async function submitExam() {
+        if (!checkAllQuestionsAnswered()) return;
+
+        const name = currentUser;
+        if (!name) {
+            alert("Vui lòng đăng nhập lại!");
+            return;
+        }
+
+        const q1Val = document.querySelector('input[name="q1"]:checked').value;
+        const q2Val = document.querySelector('input[name="q2"]:checked').value;
+        const answers = { q1: q1Val, q2: q2Val };
+
+        // Gửi kèm start_time để tính thời gian làm bài
+        const payload = {
+            name: name,
+            code: "group3laso1",
+            answers: answers,
+            start_time: examStartTime
+        };
+
+        try {
+            const res = await fetch('/submit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            const result = await response.json();
-            if (response.ok) {
-                alert(`✅ Nộp bài thành công!\nĐiểm của bạn: ${result.score}/2`);
-                location.reload();
+            const data = await res.json();
+            if (res.ok) {
+                // Hiện modal điểm theo Azota
+                showModal(data.score);
+                // Load lại leaderboard (sẽ được gọi trong closeModal, nhưng gọi luôn để cập nhật)
+                loadLeaderboard();
             } else {
-                alert(`Lỗi: ${result.error || 'Không thể nộp bài'}`);
+                alert("Lỗi: " + (data.error || "Không thể nộp bài"));
             }
         } catch (err) {
-            alert("Lỗi kết nối đến máy chủ. Vui lòng thử lại.");
+            alert("Lỗi kết nối server!");
         }
     }
 
-    // start exam
+    // Bắt đầu làm bài: lưu thời gian, ẩn login, hiện quiz
     function startTest() {
-        const nameVal = nameInput.value.trim();
-        const codeVal = codeInput.value.trim();
-        if (!nameVal || codeVal !== "group3laso1") {
-            alert("Sai mã truy cập hoặc chưa nhập tên!");
+        const name = document.getElementById('fullname').value.trim();
+        const code = document.getElementById('accessCode').value.trim();
+        if (!name || code !== "group3laso1") {
+            alert("Sai mã truy cập hoặc chưa nhập họ tên!");
             return;
         }
-        studentName = nameVal;
-        studentNameSpan.innerText = `👤 ${studentName}`;
-        loginDiv.style.display = 'none';
-        quizDiv.style.display = 'block';
-        examStarted = true;
-        localStorage.setItem('exam_start_time', new Date().toISOString());
-        // initialize answers
-        userAnswers.fill(null);
-        currentIndex = 0;
-        timeLeftSeconds = 90 * 60;
-        updateTimerDisplay();
-        startTimer();
-        renderCurrentQuestion();
-        renderPalette();
-        // navigation events
-        prevBtn.onclick = () => goToQuestion(currentIndex - 1);
-        nextBtn.onclick = () => goToQuestion(currentIndex + 1);
-        submitBtn.onclick = () => {
-            if (confirm("Bạn chắc chắn muốn nộp bài?")) submitExam();
-        };
+        currentUser = name;
+        examStartTime = new Date().toISOString();
+        document.getElementById('loginCard').style.display = 'none';
+        document.getElementById('quizCard').style.display = 'block';
+        // reset lỗi nếu có
+        document.getElementById('submitError').innerText = "";
+        // bỏ chọn radio cũ (nếu có)
+        document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
     }
 
-    startButton.addEventListener('click', startTest);
+    // Event listeners
+    document.getElementById('startExamBtn').addEventListener('click', startTest);
+    document.getElementById('submitExam').addEventListener('click', submitExam);
+    document.getElementById('refreshLeaderboardBtn').addEventListener('click', loadLeaderboard);
+
+    // Tải leaderboard ngay khi mở trang
+    loadLeaderboard();
 </script>
 </body>
 </html>
