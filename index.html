@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Nhóm 3 - Trắc Nghiệm Thi Thử THPTQG TIẾNG ANH</title>
     <style>
+        /* ... toàn bộ style giữ nguyên như bạn đã có ... */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; display: flex; justify-content: center; padding: 20px; }
         .main-container { max-width: 1300px; width: 100%; }
@@ -35,15 +36,7 @@
         .submit-bottom button:hover { background: #059669; }
         .question-card { animation: fade 0.2s ease; }
         @keyframes fade { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }
-        /* Ảnh FULL WIDTH chạm 2 bên rìa */
-        .question-image {
-            width: 100%;
-            height: auto;
-            object-fit: cover;
-            margin-bottom: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
+        .question-image { width: 100%; height: auto; object-fit: cover; margin-bottom: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .q-text { font-size: 1.2rem; font-weight: 600; margin-bottom: 24px; color: #0f172a; }
         .options-list { display: flex; flex-direction: column; gap: 14px; margin: 20px 0 30px; }
         .option-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 20px; padding: 12px 18px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
@@ -126,7 +119,7 @@
     // ---- Biến toàn cục ----
     let MASTER_QUESTIONS = [];
     let currentQuestions = [];
-    let userAnswers = [];        // mảng 40 câu trả lời (text)
+    let userAnswers = [];
     let currentIndex = 0;
     let timerInterval = null;
     let timeLeftSeconds = 90 * 60;
@@ -136,7 +129,6 @@
     let startTimeISO = null;
     let examDurationMin = 90;
 
-    // DOM
     const loginCard = document.getElementById('loginCard');
     const examContainer = document.getElementById('examContainer');
     const studentNameSpan = document.getElementById('studentNameDisplay');
@@ -148,7 +140,6 @@
     const submitBtn = document.getElementById('submitExamBtn');
     const resumeModal = document.getElementById('resumeModal');
 
-    // Helper
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;': m==='<'?'&lt;':'&gt;'); }
     function formatTime(sec) { const m = Math.floor(sec/60), s = sec%60; return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`; }
     function updateTimerDisplay() { timerDisplay.innerText = formatTime(timeLeftSeconds); if(timeLeftSeconds<=0 && timerInterval) { clearInterval(timerInterval); alert("Hết thời gian! Tự động nộp bài."); submitExam(); } }
@@ -178,7 +169,7 @@
     async function loadQuestionsFromServer() {
         try {
             const res = await fetch('/get-questions');
-            const data = await res.json(); // [{text, imageUrl, options, correctText}]
+            const data = await res.json();
             MASTER_QUESTIONS = data.map((q, idx) => {
                 return {
                     id: idx,
@@ -190,7 +181,6 @@
             });
         } catch (err) {
             console.error("Lỗi tải câu hỏi:", err);
-            // Fallback tạo 40 câu mặc định
             MASTER_QUESTIONS = [];
             for (let i = 0; i < 40; i++) {
                 MASTER_QUESTIONS.push({
@@ -307,7 +297,20 @@
         studentNameSpan.innerText = `👤 ${escapeHtml(currentUser)}`;
         try {
             if(MASTER_QUESTIONS.length === 0) await loadQuestionsFromServer();
-            const res = await fetch('/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, code }) });
+            // Tạo bộ câu hỏi xáo trộn
+            currentQuestions = getShuffledQuestions();
+            userAnswers = new Array(currentQuestions.length).fill(null);
+            currentIndex = 0;
+            // Gửi shuffled_questions lên server
+            const res = await fetch('/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name,
+                    code: code,
+                    shuffled_questions: currentQuestions  // gửi mảng câu hỏi đã xáo trộn
+                })
+            });
             const data = await res.json();
             if(res.ok) {
                 sessionId = data.session_id;
@@ -315,9 +318,6 @@
                 examDurationMin = data.duration_minutes;
                 timeLeftSeconds = computeTimeLeft();
                 if(timeLeftSeconds <= 0) { alert("Thời gian làm bài đã hết!"); return; }
-                currentQuestions = getShuffledQuestions();
-                userAnswers = new Array(currentQuestions.length).fill(null);
-                currentIndex = 0;
                 loginCard.style.display = 'none';
                 examContainer.style.display = 'block';
                 updateTimerDisplay();
@@ -325,7 +325,9 @@
                 renderCurrentQuestion();
                 renderPalette();
                 saveToLocalStorage();
-            } else { errorDiv.innerText = data.error || "Không thể bắt đầu!"; }
+            } else {
+                errorDiv.innerText = data.error || "Không thể bắt đầu!";
+            }
         } catch(err) { errorDiv.innerText = "Lỗi kết nối server!"; }
     }
 
