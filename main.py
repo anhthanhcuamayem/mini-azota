@@ -4,7 +4,6 @@ from datetime import datetime, timedelta, timezone
 import json
 import os
 import uuid
-import re
 
 app = FastAPI()
 DATA_FILE = "history.json"
@@ -12,7 +11,7 @@ SESSIONS_FILE = "sessions.json"
 ACCESS_CODE = "group3laso1"
 EXAM_DURATION_MINUTES = 90
 CORRECT_ANSWERS = {"q1": "Lazy learner", "q2": "Vanishing Gradient"}
-TOTAL_QUESTIONS = 2  # chỉ 2 câu tính điểm, các câu còn lại là placeholder
+TOTAL_QUESTIONS = 2  # chỉ 2 câu tính điểm
 
 def get_vn_time():
     vn_tz = timezone(timedelta(hours=7))
@@ -42,7 +41,6 @@ def save_session(session_id, name, start_time):
         "start_time": start_time.isoformat()
     }
     
-    # atomic write
     with open(SESSIONS_FILE + ".tmp", "w", encoding="utf-8") as f:
         json.dump(sessions, f, ensure_ascii=False, indent=4)
     os.replace(SESSIONS_FILE + ".tmp", SESSIONS_FILE)
@@ -74,7 +72,6 @@ def delete_session(session_id):
     os.replace(SESSIONS_FILE + ".tmp", SESSIONS_FILE)
 
 def cleanup_old_sessions(max_age_hours=2):
-    """Xóa session cũ hơn max_age_hours"""
     if not os.path.exists(SESSIONS_FILE):
         return
     with open(SESSIONS_FILE, "r", encoding="utf-8") as f:
@@ -101,7 +98,6 @@ def cleanup_old_sessions(max_age_hours=2):
         os.replace(SESSIONS_FILE + ".tmp", SESSIONS_FILE)
 
 def save_submission(entry):
-    """Ghi submission một cách atomic"""
     submissions = []
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -126,13 +122,17 @@ async def start_exam(request: Request):
         name = data.get("name", "").strip()
         code = data.get("code", "").strip()
         
-        # Validation
-        if not name or code != ACCESS_CODE:
-            return JSONResponse(status_code=401, content={"error": "Sai mã truy cập hoặc chưa nhập tên!"})
-        if len(name) > 50 or not re.match(r'^[\p{L}\p{N}\s]+$', name, re.UNICODE):
-            return JSONResponse(status_code=400, content={"error": "Tên không hợp lệ (chỉ chữ, số, khoảng trắng, tối đa 50 ký tự)!"})
+        # Validation không dùng regex (tránh lỗi bad escape)
+        if not name:
+            return JSONResponse(status_code=400, content={"error": "Vui lòng nhập họ tên!"})
+        if len(name) > 50:
+            return JSONResponse(status_code=400, content={"error": "Tên không được vượt quá 50 ký tự!"})
+        # Kiểm tra ký tự điều khiển hoặc không in được (đơn giản)
+        if any(ord(c) < 32 or ord(c) == 127 for c in name):
+            return JSONResponse(status_code=400, content={"error": "Tên chứa ký tự không hợp lệ!"})
+        if code != ACCESS_CODE:
+            return JSONResponse(status_code=401, content={"error": "Sai mã truy cập!"})
         
-        # Dọn dẹp session cũ
         cleanup_old_sessions()
         
         session_id = str(uuid.uuid4())
@@ -192,7 +192,6 @@ async def handle_submit(request: Request):
             "answers": answers
         }
         save_submission(new_entry)
-        
         delete_session(session_id)
         
         return {
@@ -207,7 +206,6 @@ async def handle_submit(request: Request):
 
 @app.get("/leaderboard")
 async def get_leaderboard():
-    """Trả về top 3 người có thành tích CAO NHẤT (mỗi người lấy điểm cao nhất, thời gian nhanh nhất)"""
     if not os.path.exists(DATA_FILE):
         return []
     
@@ -243,13 +241,10 @@ async def get_leaderboard():
     best_list = list(best_by_name.values())
     sorted_subs = sorted(best_list, key=lambda x: (-x["score"], x["duration_sec"]))
     top3 = sorted_subs[:3]
-    
-    # Thêm total_questions cho FE
     return {"leaderboard": top3, "total_questions": TOTAL_QUESTIONS}
 
 @app.get("/history/{name}")
 async def get_user_history(name: str):
-    """Lấy lịch sử làm bài, sắp xếp theo thời gian mới nhất trước (dùng ISO)"""
     if not os.path.exists(DATA_FILE):
         return []
     
@@ -260,13 +255,9 @@ async def get_user_history(name: str):
             return []
     
     user_history = [s for s in submissions if s["name"] == name]
-    # Sắp xếp theo submitted_at_iso giảm dần (mới nhất lên đầu)
     user_history.sort(key=lambda x: x.get("submitted_at_iso", ""), reverse=True)
-    
-    # Loại bỏ trường answers nếu không muốn gửi lên (tiết kiệm bandwidth)
     for item in user_history:
         item.pop("answers", None)
-    
     return user_history
 
 @app.get("/admin-check-history")
