@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Nhóm 3 - Thi trắc nghiệm</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <div class="main-container">
-    <!-- KHUNG ĐĂNG NHẬP -->
+    <!-- ĐĂNG NHẬP -->
     <div class="card" id="loginCard">
         <div class="login-area">
             <h2>📚 NHÓM 3 - PHÒNG THI</h2>
@@ -18,7 +18,7 @@
         </div>
     </div>
 
-    <!-- KHUNG LÀM BÀI (2 cột) -->
+    <!-- LÀM BÀI -->
     <div class="exam-container" id="examContainer">
         <div class="exam-header">
             <h2>📝 ĐỀ THI NHÓM 3 (MACHINE LEARNING)</h2>
@@ -41,24 +41,17 @@
                 </div>
                 <div class="palette-title">📌 Bảng câu hỏi</div>
                 <div id="questionPaletteGrid" class="question-grid"></div>
-                <div style="font-size:12px; color:#475569; margin-top: 16px;">
-                    ✅ Xanh: Đã trả lời &nbsp;⚪ Trắng: Chưa làm<br>
-                    🔵 Xanh dương: Câu hiện tại
-                </div>
+                <div class="palette-note">✅ Xanh: Đã trả lời &nbsp;⚪ Trắng: Chưa làm<br>🔵 Xanh dương: Câu hiện tại</div>
             </div>
         </div>
     </div>
 
     <!-- BẢNG XẾP HẠNG -->
     <div class="leaderboard-card">
-        <h3>🏆 Bảng xếp hạng (Top 3 điểm cao nhất - mỗi người lấy thành tích tốt nhất)</h3>
+        <h3>🏆 Bảng xếp hạng (Top 3 điểm cao nhất)</h3>
         <table class="leaderboard-table" id="leaderboardTable">
-            <thead>
-                <tr><th>#</th><th>Họ tên</th><th>Điểm</th><th>Thời gian</th></tr>
-            </thead>
-            <tbody id="leaderboardBody">
-                <tr><td colspan="4" class="loading">Đang tải...</td></tr>
-            </tbody>
+            <thead><tr><th>#</th><th>Họ tên</th><th>Điểm</th><th>Thời gian</th></tr></thead>
+            <tbody id="leaderboardBody"><tr><td colspan="4" class="loading">Đang tải...</td></tr></tbody>
         </table>
         <button class="refresh-leaderboard" id="refreshLeaderboardBtn">🔄 Làm mới bảng</button>
     </div>
@@ -89,6 +82,243 @@
     </div>
 </div>
 
-<script src="script.js"></script>
+<script>
+    const TOTAL_QS = 40;
+    const questions = [];
+    for (let i = 0; i < TOTAL_QS; i++) {
+        if (i === 0) {
+            questions.push({ text: "Trong Machine Learning, k-NN là gì?", options: ["Lazy learner", "Eager learner"], isActive: true });
+        } else if (i === 1) {
+            questions.push({ text: "RNN thường bị lỗi gì?", options: ["Vanishing Gradient", "Data Augmentation"], isActive: true });
+        } else {
+            questions.push({ text: "Câu hỏi đang được cập nhật", options: [], isActive: false, placeholder: "📘 Nội dung câu hỏi sẽ sớm được bổ sung." });
+        }
+    }
+
+    let userAnswers = new Array(TOTAL_QS).fill(null);
+    let currentIndex = 0;
+    let timerInterval = null;
+    let timeLeftSeconds = 90 * 60;
+    let sessionId = null;
+    let currentUser = "";
+    let lastSubmittedName = "";
+
+    const loginCard = document.getElementById('loginCard');
+    const examContainer = document.getElementById('examContainer');
+    const studentNameSpan = document.getElementById('studentNameDisplay');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const paletteContainer = document.getElementById('questionPaletteGrid');
+    const dynamicQuestionDiv = document.getElementById('dynamicQuestion');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('submitExamBtn');
+
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function updateTimerDisplay() {
+        timerDisplay.innerText = formatTime(timeLeftSeconds);
+        if (timeLeftSeconds <= 0) {
+            if (timerInterval) clearInterval(timerInterval);
+            alert("Hết thời gian! Hệ thống tự động nộp bài.");
+            submitExam();
+        }
+    }
+
+    function startTimer() {
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            if (timeLeftSeconds > 0) {
+                timeLeftSeconds--;
+                updateTimerDisplay();
+            } else {
+                clearInterval(timerInterval);
+            }
+        }, 1000);
+    }
+
+    function renderPalette() {
+        paletteContainer.innerHTML = '';
+        for (let i = 0; i < TOTAL_QS; i++) {
+            const btn = document.createElement('div');
+            btn.classList.add('q-num-btn');
+            btn.innerText = i + 1;
+            if (userAnswers[i] !== null && userAnswers[i] !== "") btn.classList.add('answered');
+            if (currentIndex === i) btn.classList.add('current');
+            if (!questions[i].isActive) btn.classList.add('disabled');
+            btn.addEventListener('click', (function(idx) {
+                return function() {
+                    if (questions[idx].isActive) goToQuestion(idx);
+                    else alert("Câu hỏi này hiện chưa có nội dung.");
+                };
+            })(i));
+            paletteContainer.appendChild(btn);
+        }
+    }
+
+    function goToQuestion(index) {
+        if (index < 0 || index >= TOTAL_QS) return;
+        currentIndex = index;
+        renderCurrentQuestion();
+        renderPalette();
+    }
+
+    function renderCurrentQuestion() {
+        const q = questions[currentIndex];
+        if (!q) return;
+        let html = `<div class="q-text">Câu ${currentIndex + 1}: ${q.text}</div>`;
+        if (q.isActive) {
+            html += `<div class="options-list" id="optionsList">`;
+            q.options.forEach(opt => {
+                const isChecked = (userAnswers[currentIndex] === opt);
+                const selectedClass = isChecked ? 'selected' : '';
+                html += `<div class="option-item ${selectedClass}" data-value="${opt.replace(/"/g, '&quot;')}">
+                            <input type="radio" name="questionOption" value="${opt.replace(/"/g, '&quot;')}" ${isChecked ? 'checked' : ''} class="option-radio">
+                            <span class="option-label">${opt}</span>
+                        </div>`;
+            });
+            html += `</div>`;
+        } else {
+            html += `<div class="placeholder-message">⚠️ ${q.placeholder}</div>`;
+        }
+        dynamicQuestionDiv.innerHTML = html;
+
+        if (q.isActive) {
+            const radioInputs = document.querySelectorAll('input[name="questionOption"]');
+            const optionDivs = document.querySelectorAll('.option-item');
+            const updateAnswer = (selectedVal) => {
+                userAnswers[currentIndex] = selectedVal;
+                renderPalette();
+                optionDivs.forEach(div => {
+                    const val = div.getAttribute('data-value');
+                    if (val === selectedVal) div.classList.add('selected');
+                    else div.classList.remove('selected');
+                });
+            };
+            radioInputs.forEach(radio => {
+                radio.addEventListener('change', (e) => { if (radio.checked) updateAnswer(radio.value); });
+            });
+            optionDivs.forEach(div => {
+                div.addEventListener('click', (e) => {
+                    const radio = div.querySelector('input[type="radio"]');
+                    if (radio && !radio.checked) { radio.checked = true; updateAnswer(radio.value); }
+                });
+            });
+        }
+    }
+
+    function checkAllQuestionsAnswered() {
+        for (let i = 0; i < 2; i++) {
+            if (!userAnswers[i] || userAnswers[i] === "") {
+                document.getElementById('submitError').innerText = "❌ Bạn chưa trả lời hết câu hỏi 1 và 2!";
+                return false;
+            }
+        }
+        document.getElementById('submitError').innerText = "";
+        return true;
+    }
+
+    async function submitExam() {
+        if (!checkAllQuestionsAnswered()) return;
+        if (!sessionId) { alert("Lỗi: Không tìm thấy phiên làm bài!"); return; }
+        if (timerInterval) clearInterval(timerInterval);
+
+        const payload = {
+            name: currentUser,
+            code: "group3laso1",
+            session_id: sessionId,
+            answers: { q1: userAnswers[0], q2: userAnswers[1] }
+        };
+
+        try {
+            const res = await fetch('/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showResultModal(data.score, data.name);
+                loadLeaderboard();
+            } else {
+                alert("Lỗi: " + (data.error || "Không thể nộp bài"));
+            }
+        } catch (err) { alert("Lỗi kết nối server!"); }
+    }
+
+    async function startTest() {
+        const name = document.getElementById('fullname').value.trim();
+        const code = document.getElementById('accessCode').value.trim();
+        if (!name || code !== "group3laso1") { alert("Sai mã truy cập hoặc chưa nhập họ tên!"); return; }
+        currentUser = name;
+        studentNameSpan.innerText = `👤 ${currentUser}`;
+        try {
+            const res = await fetch('/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, code: code })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                sessionId = data.session_id;
+                loginCard.style.display = 'none';
+                examContainer.style.display = 'block';
+                userAnswers.fill(null);
+                currentIndex = 0;
+                timeLeftSeconds = 90 * 60;
+                updateTimerDisplay();
+                startTimer();
+                renderCurrentQuestion();
+                renderPalette();
+                document.getElementById('submitError').innerText = "";
+            } else { alert(data.error || "Không thể bắt đầu bài thi!"); }
+        } catch (err) { alert("Lỗi kết nối server!"); }
+    }
+
+    async function loadLeaderboard() {
+        try {
+            const res = await fetch('/leaderboard');
+            const data = await res.json();
+            const tbody = document.getElementById('leaderboardBody');
+            if (!data.length) { tbody.innerHTML = '<tr><td colspan="4">Chưa có dữ liệu</td></tr>'; return; }
+            tbody.innerHTML = data.map((item, idx) => `<tr><td>${idx+1}</td><td>${escapeHtml(item.name)}</td><td><strong>${item.score}/2</strong></td><td>${item.duration_formatted}</td></tr>`).join('');
+        } catch(e) { console.error(e); }
+    }
+
+    async function loadUserHistory(name) {
+        try {
+            const res = await fetch(`/history/${encodeURIComponent(name)}`);
+            const history = await res.json();
+            const historyContent = document.getElementById('historyContent');
+            if (!history.length) { historyContent.innerHTML = '<p class="text-center">📭 Chưa có lịch sử làm bài</p>'; return; }
+            let html = '<table class="history-table"><thead><tr><th>Lần</th><th>Điểm</th><th>Thời gian làm</th><th>Ngày nộp</th></tr></thead><tbody>';
+            history.forEach((item, idx) => { html += `<tr><td>${idx+1}</td><td><strong>${item.score}/2</strong></td><td>${item.duration_formatted}</td><td>${item.submitted_at}</td></tr>`; });
+            html += '</tbody></table>';
+            historyContent.innerHTML = html;
+        } catch(e) { document.getElementById('historyContent').innerHTML = '<p class="text-center">❌ Lỗi tải lịch sử</p>'; }
+    }
+
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
+    function showResultModal(score, name) { document.getElementById('modalScore').innerText = `${score}/2`; lastSubmittedName = name; document.getElementById('resultModal').style.display = 'flex'; }
+    function closeResultAndReload() { document.getElementById('resultModal').style.display = 'none'; location.reload(); }
+    function showHistoryModal(name) { loadUserHistory(name); document.getElementById('historyModal').style.display = 'flex'; }
+    function closeHistoryModal() { document.getElementById('historyModal').style.display = 'none'; }
+    function closeHistoryAndReload() { document.getElementById('historyModal').style.display = 'none'; location.reload(); }
+
+    document.getElementById('startExamBtn').addEventListener('click', startTest);
+    document.getElementById('refreshLeaderboardBtn').addEventListener('click', loadLeaderboard);
+    prevBtn.addEventListener('click', () => goToQuestion(currentIndex - 1));
+    nextBtn.addEventListener('click', () => goToQuestion(currentIndex + 1));
+    submitBtn.addEventListener('click', submitExam);
+    document.getElementById('viewHistoryFromResultBtn').addEventListener('click', () => { document.getElementById('resultModal').style.display = 'none'; showHistoryModal(lastSubmittedName); });
+    document.getElementById('closeResultAndReloadBtn').addEventListener('click', closeResultAndReload);
+    document.getElementById('closeHistoryBtn').addEventListener('click', closeHistoryModal);
+    document.getElementById('backToHomeFromHistoryBtn').addEventListener('click', closeHistoryAndReload);
+
+    loadLeaderboard();
+</script>
 </body>
 </html>
