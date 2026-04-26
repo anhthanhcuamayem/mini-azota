@@ -1,15 +1,18 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse
 from datetime import datetime, timedelta, timezone
 import json
 import os
 import uuid
+import re
 
 app = FastAPI()
 DATA_FILE = "history.json"
 SESSIONS_FILE = "sessions.json"
 ACCESS_CODE = "group3laso1"
+EXAM_DURATION_MINUTES = 90
 CORRECT_ANSWERS = {"q1": "Lazy learner", "q2": "Vanishing Gradient"}
+TOTAL_QUESTIONS = 2  # chỉ 2 câu tính điểm, các câu còn lại là placeholder
 
 def get_vn_time():
     vn_tz = timezone(timedelta(hours=7))
@@ -39,8 +42,10 @@ def save_session(session_id, name, start_time):
         "start_time": start_time.isoformat()
     }
     
-    with open(SESSIONS_FILE, "w", encoding="utf-8") as f:
+    # atomic write
+    with open(SESSIONS_FILE + ".tmp", "w", encoding="utf-8") as f:
         json.dump(sessions, f, ensure_ascii=False, indent=4)
+    os.replace(SESSIONS_FILE + ".tmp", SESSIONS_FILE)
 
 def get_session(session_id):
     if not os.path.exists(SESSIONS_FILE):
@@ -64,8 +69,50 @@ def delete_session(session_id):
     if session_id in sessions:
         del sessions[session_id]
     
-    with open(SESSIONS_FILE, "w", encoding="utf-8") as f:
+    with open(SESSIONS_FILE + ".tmp", "w", encoding="utf-8") as f:
         json.dump(sessions, f, ensure_ascii=False, indent=4)
+    os.replace(SESSIONS_FILE + ".tmp", SESSIONS_FILE)
+
+def cleanup_old_sessions(max_age_hours=2):
+    """Xóa session cũ hơn max_age_hours"""
+    if not os.path.exists(SESSIONS_FILE):
+        return
+    with open(SESSIONS_FILE, "r", encoding="utf-8") as f:
+        try:
+            sessions = json.load(f)
+        except:
+            sessions = {}
+    
+    now = get_current_utc()
+    expired = []
+    for sid, data in sessions.items():
+        try:
+            start = datetime.fromisoformat(data["start_time"])
+            if (now - start).total_seconds() > max_age_hours * 3600:
+                expired.append(sid)
+        except:
+            expired.append(sid)
+    
+    if expired:
+        for sid in expired:
+            del sessions[sid]
+        with open(SESSIONS_FILE + ".tmp", "w", encoding="utf-8") as f:
+            json.dump(sessions, f, ensure_ascii=False, indent=4)
+        os.replace(SESSIONS_FILE + ".tmp", SESSIONS_FILE)
+
+def save_submission(entry):
+    """Ghi submission một cách atomic"""
+    submissions = []
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            try:
+                submissions = json.load(f)
+            except:
+                submissions = []
+    submissions.append(entry)
+    with open(DATA_FILE + ".tmp", "w", encoding="utf-8") as f:
+        json.dump(submissions, f, ensure_ascii=False, indent=4)
+    os.replace(DATA_FILE + ".tmp", DATA_FILE)
 
 @app.get("/", response_class=HTMLResponse)
 async def get_home():
@@ -79,15 +126,26 @@ async def start_exam(request: Request):
         name = data.get("name", "").strip()
         code = data.get("code", "").strip()
         
+        # Validation
         if not name or code != ACCESS_CODE:
             return JSONResponse(status_code=401, content={"error": "Sai mã truy cập hoặc chưa nhập tên!"})
+        if len(name) > 50 or not re.match(r'^[\p{L}\p{N}\s]+$', name, re.UNICODE):
+            return JSONResponse(status_code=400, content={"error": "Tên không hợp lệ (chỉ chữ, số, khoảng trắng, tối đa 50 ký tự)!"})
+        
+        # Dọn dẹp session cũ
+        cleanup_old_sessions()
         
         session_id = str(uuid.uuid4())
         start_time = get_current_utc()
         
         save_session(session_id, name, start_time)
         
-        return {"session_id": session_id, "start_time": start_time.isoformat()}
+        return {
+            "session_id": session_id,
+            "start_time": start_time.isoformat(),
+            "duration_minutes": EXAM_DURATION_MINUTES,
+            "total_questions": TOTAL_QUESTIONS
+        }
     
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
@@ -123,38 +181,33 @@ async def handle_submit(request: Request):
         duration_sec = int((now - start_time).total_seconds())
         duration_fmt = format_duration(duration_sec)
         
-        submissions = []
-        if os.path.exists(DATA_FILE):
-            with open(DATA_FILE, "r", encoding="utf-8") as f:
-                try:
-                    submissions = json.load(f)
-                except:
-                    submissions = []
-        
         new_entry = {
             "name": session["name"],
             "score": score,
-            "score_display": f"{score}/2",
+            "score_display": f"{score}/{TOTAL_QUESTIONS}",
             "duration_sec": duration_sec,
             "duration_formatted": duration_fmt,
-            "submitted_at": get_vn_time(),
+            "submitted_at_display": get_vn_time(),
+            "submitted_at_iso": now.isoformat(),
             "answers": answers
         }
-        submissions.append(new_entry)
-        
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(submissions, f, ensure_ascii=False, indent=4)
+        save_submission(new_entry)
         
         delete_session(session_id)
         
-        return {"score": f"{score}/2", "message": "success", "name": session["name"]}
+        return {
+            "score": f"{score}/{TOTAL_QUESTIONS}",
+            "message": "success",
+            "name": session["name"],
+            "total_questions": TOTAL_QUESTIONS
+        }
     
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.get("/leaderboard")
 async def get_leaderboard():
-    """Trả về top 3 người có thành tích CAO NHẤT (nếu trùng tên thì lấy điểm cao nhất, thời gian nhanh nhất)"""
+    """Trả về top 3 người có thành tích CAO NHẤT (mỗi người lấy điểm cao nhất, thời gian nhanh nhất)"""
     if not os.path.exists(DATA_FILE):
         return []
     
@@ -164,7 +217,6 @@ async def get_leaderboard():
         except:
             return []
     
-    # Gom nhóm theo tên, lấy thành tích tốt nhất của mỗi người
     best_by_name = {}
     for sub in submissions:
         name = sub["name"]
@@ -179,7 +231,6 @@ async def get_leaderboard():
                 "duration_formatted": sub["duration_formatted"]
             }
         else:
-            # Nếu điểm cao hơn, hoặc bằng điểm nhưng thời gian nhanh hơn
             current = best_by_name[name]
             if score > current["score"] or (score == current["score"] and duration < current["duration_sec"]):
                 best_by_name[name] = {
@@ -189,16 +240,16 @@ async def get_leaderboard():
                     "duration_formatted": sub["duration_formatted"]
                 }
     
-    # Chuyển thành list và sắp xếp
     best_list = list(best_by_name.values())
     sorted_subs = sorted(best_list, key=lambda x: (-x["score"], x["duration_sec"]))
     top3 = sorted_subs[:3]
     
-    return top3
+    # Thêm total_questions cho FE
+    return {"leaderboard": top3, "total_questions": TOTAL_QUESTIONS}
 
 @app.get("/history/{name}")
 async def get_user_history(name: str):
-    """Lấy lịch sử làm bài của một người cụ thể"""
+    """Lấy lịch sử làm bài, sắp xếp theo thời gian mới nhất trước (dùng ISO)"""
     if not os.path.exists(DATA_FILE):
         return []
     
@@ -208,9 +259,13 @@ async def get_user_history(name: str):
         except:
             return []
     
-    # Lọc theo tên, sắp xếp theo thời gian mới nhất trước
     user_history = [s for s in submissions if s["name"] == name]
-    user_history.sort(key=lambda x: x["submitted_at"], reverse=True)
+    # Sắp xếp theo submitted_at_iso giảm dần (mới nhất lên đầu)
+    user_history.sort(key=lambda x: x.get("submitted_at_iso", ""), reverse=True)
+    
+    # Loại bỏ trường answers nếu không muốn gửi lên (tiết kiệm bandwidth)
+    for item in user_history:
+        item.pop("answers", None)
     
     return user_history
 
