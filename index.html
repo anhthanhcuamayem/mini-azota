@@ -4,20 +4,335 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Nhóm 3 - Thi trắc nghiệm</title>
-    <link rel="stylesheet" href="style.css">
     <style>
-        /* Thêm một số style bổ sung (nếu cần) */
-        .warning-banner {
-            background: #fef3c7;
-            border-left: 4px solid #f59e0b;
-            padding: 10px 16px;
-            margin-bottom: 20px;
-            border-radius: 16px;
-            font-size: 0.9rem;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .resume-btn {
-            background: #3b82f6;
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f1f5f9;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        .main-container {
+            max-width: 1300px;
+            width: 100%;
+        }
+        .card {
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+            padding: 28px 30px;
+            margin-bottom: 30px;
+        }
+        .login-area {
+            text-align: center;
+        }
+        input {
+            width: 100%;
+            padding: 14px;
+            margin: 12px 0;
+            border: 1px solid #cbd5e1;
+            border-radius: 40px;
+            font-size: 1rem;
+        }
+        button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.2s;
+        }
+        button:hover {
+            background: #4338ca;
+        }
+        .exam-container {
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            margin-bottom: 30px;
+            display: none;
+        }
+        .exam-header {
+            background: #1e293b;
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .exam-header h2 {
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+        .student-info {
+            background: #0f172a;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+        }
+        .exam-layout {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .question-area {
+            flex: 2.5;
+            background: #ffffff;
+            padding: 28px 30px;
+            min-width: 260px;
+        }
+        .sidebar {
+            flex: 1.2;
+            background: #f8fafc;
+            border-left: 1px solid #e2e8f0;
+            padding: 28px 20px;
+            min-width: 240px;
+        }
+        .timer-card {
+            background: white;
+            border-radius: 24px;
+            padding: 20px 16px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 32px;
+        }
+        .timer-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #475569;
+            font-weight: 600;
+        }
+        .timer-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            font-family: monospace;
+            color: #0f172a;
+        }
+        .palette-title {
+            font-weight: 700;
+            margin-bottom: 18px;
+            font-size: 1rem;
+            border-left: 4px solid #4f46e5;
+            padding-left: 12px;
+        }
+        .question-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+        }
+        .q-num-btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 40px;
+            padding: 8px 0;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .q-num-btn.answered {
+            background: #22c55e;
+            border-color: #22c55e;
+            color: white;
+        }
+        .q-num-btn.current {
+            background: #4f46e5;
+            border-color: #4f46e5;
+            color: white;
+            box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+        }
+        .q-num-btn.disabled {
+            opacity: 0.5;
+            background: #e2e8f0;
+            cursor: not-allowed;
+        }
+        .q-num-btn:not(.disabled):hover {
+            background: #e0e7ff;
+            border-color: #818cf8;
+        }
+        .palette-note {
+            font-size: 12px;
+            color: #475569;
+            margin-top: 16px;
+        }
+        .question-card {
+            animation: fade 0.2s ease;
+        }
+        @keyframes fade {
+            from { opacity: 0; transform: translateX(8px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .q-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: #0f172a;
+        }
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin: 20px 0 30px;
+        }
+        .option-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+        .option-item.selected {
+            background: #eef2ff;
+            border-color: #4f46e5;
+        }
+        .option-radio {
+            width: 18px;
+            height: 18px;
+            accent-color: #4f46e5;
+        }
+        .placeholder-message {
+            background: #fef9c3;
+            border-left: 4px solid #eab308;
+            padding: 16px;
+            border-radius: 16px;
+            color: #854d0e;
+            margin: 20px 0;
+        }
+        .nav-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .nav-btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .nav-btn.primary {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+        .nav-btn.primary:hover {
+            background: #059669;
+        }
+        .leaderboard-card {
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+            padding: 24px 28px;
+        }
+        .leaderboard-table,
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .leaderboard-table th,
+        .leaderboard-table td,
+        .history-table th,
+        .history-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .leaderboard-table th,
+        .history-table th {
+            background: #f1f5f9;
+            font-weight: 600;
+        }
+        .refresh-leaderboard {
+            background: #e2e8f0;
+            color: #1e293b;
+            margin-top: 16px;
+            font-size: 0.8rem;
+            padding: 8px;
+            width: auto;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 32px;
+            max-width: 550px;
+            width: 90%;
+            padding: 28px;
+            text-align: center;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-content h2 {
+            color: #10b981;
+            margin-bottom: 12px;
+        }
+        .modal-score {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin: 16px 0;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .btn-group button {
+            flex: 1;
+            margin-top: 0;
+        }
+        .error-msg {
+            color: #dc2626;
+            font-size: 0.85rem;
             margin-top: 8px;
+            text-align: center;
+        }
+        .loading {
+            text-align: center;
+            color: #64748b;
+            padding: 20px;
+        }
+        .text-center {
+            text-align: center;
+        }
+        h3 {
+            margin-bottom: 16px;
+            color: #0f172a;
+        }
+        @media (max-width: 780px) {
+            .exam-layout {
+                flex-direction: column;
+            }
+            .sidebar {
+                border-left: none;
+                border-top: 1px solid #e2e8f0;
+            }
         }
     </style>
 </head>
@@ -210,7 +525,7 @@
             if (timeLeftSeconds > 0) {
                 timeLeftSeconds--;
                 updateTimerDisplay();
-                // Lưu trạng thái vào localStorage mỗi 5 giây (tránh ghi liên tục)
+                // Lưu trạng thái vào localStorage mỗi 5 giây
                 if (timeLeftSeconds % 5 === 0) saveToLocalStorage();
             } else {
                 clearInterval(timerInterval);
@@ -252,8 +567,6 @@
 
     // Xử lý khi muốn tiếp tục bài cũ
     async function resumeExam(state) {
-        // Kiểm tra session còn hợp lệ không? Gọi API /check-session? Tạm thời cho phép tiếp tục.
-        // Nhưng nếu session đã hết hạn trên server, khi nộp sẽ báo lỗi.
         sessionId = state.sessionId;
         currentUser = state.currentUser;
         userAnswers = state.userAnswers;
@@ -270,8 +583,6 @@
         renderCurrentQuestion();
         renderPalette();
         document.getElementById('submitError').innerText = "";
-        
-        // Ẩn modal resume
         resumeModal.style.display = 'none';
     }
 
@@ -283,11 +594,9 @@
         currentIndex = 0;
         timeLeftSeconds = examDurationMin * 60;
         startTimeISO = null;
-        // Yêu cầu đăng nhập lại
         location.reload();
     }
 
-    // Render bảng câu hỏi
     function renderPalette() {
         paletteContainer.innerHTML = '';
         for (let i = 0; i < TOTAL_QS; i++) {
@@ -324,7 +633,6 @@
         saveToLocalStorage();
     }
 
-    // Chỉ dùng sự kiện change trên radio, bỏ click trên div
     function renderCurrentQuestion() {
         const q = questions[currentIndex];
         if (!q) return;
@@ -352,7 +660,6 @@
             const updateAnswer = (selectedVal) => {
                 userAnswers[currentIndex] = selectedVal;
                 renderPalette();
-                // Cập nhật class selected cho các div
                 optionDivs.forEach(div => {
                     const radio = div.querySelector('input[type="radio"]');
                     if (radio && radio.value === selectedVal) {
@@ -363,22 +670,16 @@
                 });
                 saveToLocalStorage();
             };
-            // Chỉ dùng sự kiện change trên radio
             radioInputs.forEach(radio => {
                 radio.addEventListener('change', (e) => {
-                    if (radio.checked) {
-                        updateAnswer(radio.value);
-                    }
+                    if (radio.checked) updateAnswer(radio.value);
                 });
             });
-            // Thêm sự kiện click vào div để tiện, nhưng không gây trùng vì radio change sẽ kích hoạt
-            // Tuy nhiên để tránh gọi hai lần, ta vẫn để click nhưng sẽ check nếu radio chưa được chọn thì chọn nó
             optionDivs.forEach(div => {
                 div.addEventListener('click', (e) => {
                     const radio = div.querySelector('input[type="radio"]');
                     if (radio && !radio.checked) {
                         radio.checked = true;
-                        // Sự kiện change sẽ tự động gọi updateAnswer
                     }
                 });
             });
@@ -495,7 +796,6 @@
         }
     }
 
-    // Leaderboard
     async function loadLeaderboard() {
         try {
             const res = await fetch('/leaderboard');
@@ -520,7 +820,6 @@
         }
     }
 
-    // History
     async function loadUserHistory(name) {
         try {
             const res = await fetch(`/history/${encodeURIComponent(name)}`);
@@ -547,7 +846,6 @@
         }
     }
 
-    // Modal functions
     function showResultModal(score, name) {
         document.getElementById('modalScore').innerText = score;
         lastSubmittedName = name;
@@ -573,12 +871,10 @@
         location.reload();
     }
 
-    // Khởi tạo: kiểm tra bài làm dở dang
     function init() {
         loadLeaderboard();
         const savedState = loadFromLocalStorage();
         if (savedState && savedState.sessionId && savedState.currentUser) {
-            // Hiển thị modal hỏi có muốn tiếp tục không
             resumeModal.style.display = 'flex';
             document.getElementById('resumeYesBtn').onclick = () => resumeExam(savedState);
             document.getElementById('resumeNoBtn').onclick = () => {
