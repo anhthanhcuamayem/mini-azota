@@ -338,7 +338,6 @@
 </head>
 <body>
 <div class="main-container">
-    <!-- KHUNG ĐĂNG NHẬP -->
     <div class="card" id="loginCard">
         <div class="login-area">
             <h2>📚 NHÓM 3 - PHÒNG THI</h2>
@@ -349,7 +348,6 @@
         </div>
     </div>
 
-    <!-- KHUNG LÀM BÀI (2 cột) -->
     <div class="exam-container" id="examContainer">
         <div class="exam-header">
             <h2>📝 ĐỀ THI NHÓM 3 (MACHINE LEARNING)</h2>
@@ -380,18 +378,16 @@
         </div>
     </div>
 
-    <!-- BẢNG XẾP HẠNG -->
     <div class="leaderboard-card">
         <h3>🏆 Bảng xếp hạng (Top 3 điểm cao nhất - mỗi người lấy thành tích tốt nhất)</h3>
         <table class="leaderboard-table" id="leaderboardTable">
             <thead><tr><th>#</th><th>Họ tên</th><th>Điểm</th><th>Thời gian</th></tr></thead>
-            <tbody id="leaderboardBody"><tr><td colspan="4" class="loading">Đang tải...</td></tr></tbody>
+            <tbody id="leaderboardBody"><tr><td colspan="4" class="loading">Đang tải......</td></tr></tbody>
         </table>
         <button class="refresh-leaderboard" id="refreshLeaderboardBtn">🔄 Làm mới bảng</button>
     </div>
 </div>
 
-<!-- MODAL KẾT QUẢ -->
 <div id="resultModal" class="modal">
     <div class="modal-content">
         <h2>✅ HOÀN THÀNH</h2>
@@ -404,7 +400,6 @@
     </div>
 </div>
 
-<!-- MODAL LỊCH SỬ -->
 <div id="historyModal" class="modal">
     <div class="modal-content">
         <h2>📜 Lịch sử làm bài của bạn</h2>
@@ -416,7 +411,6 @@
     </div>
 </div>
 
-<!-- MODAL TIẾP TỤC BÀI LÀM DỞ DANG -->
 <div id="resumeModal" class="modal">
     <div class="modal-content">
         <h2>⚠️ Bài làm chưa hoàn thành</h2>
@@ -430,9 +424,8 @@
 </div>
 
 <script>
-    // ==================== CẤU HÌNH ====================
-    const TOTAL_QS = 40;          // Tổng số câu hỏi (kể cả placeholder)
-    let TOTAL_SCORE_QS = 2;       // Sẽ cập nhật từ server
+    const TOTAL_QS = 40;
+    let TOTAL_SCORE_QS = 2;
     
     const CORRECT_ANSWERS = ["Lazy learner", "Vanishing Gradient"];
     
@@ -467,10 +460,9 @@
     let sessionId = null;
     let currentUser = "";
     let lastSubmittedName = "";
-    let startTimeISO = null;      // Lưu thời gian bắt đầu từ server
-    let examDurationMin = 90;     // Sẽ cập nhật
+    let startTimeISO = null;
+    let examDurationMin = 90;
 
-    // DOM elements
     const loginCard = document.getElementById('loginCard');
     const examContainer = document.getElementById('examContainer');
     const studentNameSpan = document.getElementById('studentNameDisplay');
@@ -482,7 +474,6 @@
     const submitBtn = document.getElementById('submitExamBtn');
     const resumeModal = document.getElementById('resumeModal');
 
-    // Helper: escape HTML
     function escapeHtml(str) {
         if (!str) return '';
         return str.replace(/[&<>]/g, function(m) {
@@ -493,7 +484,6 @@
         });
     }
 
-    // Format time mm:ss
     function formatTime(seconds) {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
@@ -502,14 +492,13 @@
 
     function updateTimerDisplay() {
         timerDisplay.innerText = formatTime(timeLeftSeconds);
-        if (timeLeftSeconds <= 0) {
-            if (timerInterval) clearInterval(timerInterval);
+        if (timeLeftSeconds <= 0 && timerInterval) {
+            clearInterval(timerInterval);
             alert("Hết thời gian! Hệ thống tự động nộp bài.");
             submitExam();
         }
     }
 
-    // Tính lại thời gian còn lại dựa trên startTime từ server
     function computeTimeLeft() {
         if (!startTimeISO) return timeLeftSeconds;
         const start = new Date(startTimeISO);
@@ -525,7 +514,6 @@
             if (timeLeftSeconds > 0) {
                 timeLeftSeconds--;
                 updateTimerDisplay();
-                // Lưu trạng thái vào localStorage mỗi 5 giây
                 if (timeLeftSeconds % 5 === 0) saveToLocalStorage();
             } else {
                 clearInterval(timerInterval);
@@ -533,30 +521,21 @@
         }, 1000);
     }
 
-    // Lưu toàn bộ trạng thái vào localStorage
     function saveToLocalStorage() {
         if (!sessionId) return;
         const state = {
-            sessionId: sessionId,
-            currentUser: currentUser,
-            userAnswers: userAnswers,
-            currentIndex: currentIndex,
-            timeLeftSeconds: timeLeftSeconds,
-            startTimeISO: startTimeISO,
-            examDurationMin: examDurationMin
+            sessionId, currentUser, userAnswers, currentIndex,
+            timeLeftSeconds, startTimeISO, examDurationMin
         };
         localStorage.setItem('examState', JSON.stringify(state));
     }
 
-    // Khôi phục trạng thái từ localStorage
     function loadFromLocalStorage() {
         const raw = localStorage.getItem('examState');
         if (!raw) return null;
         try {
             const state = JSON.parse(raw);
-            if (state.sessionId && state.currentUser) {
-                return state;
-            }
+            if (state.sessionId && state.currentUser) return state;
         } catch(e) {}
         return null;
     }
@@ -565,7 +544,6 @@
         localStorage.removeItem('examState');
     }
 
-    // Xử lý khi muốn tiếp tục bài cũ
     async function resumeExam(state) {
         sessionId = state.sessionId;
         currentUser = state.currentUser;
@@ -574,7 +552,6 @@
         timeLeftSeconds = state.timeLeftSeconds;
         startTimeISO = state.startTimeISO;
         examDurationMin = state.examDurationMin;
-        
         studentNameSpan.innerText = `👤 ${escapeHtml(currentUser)}`;
         loginCard.style.display = 'none';
         examContainer.style.display = 'block';
@@ -588,12 +565,6 @@
 
     function startNewExam() {
         clearLocalStorage();
-        sessionId = null;
-        currentUser = "";
-        userAnswers.fill(null);
-        currentIndex = 0;
-        timeLeftSeconds = examDurationMin * 60;
-        startTimeISO = null;
         location.reload();
     }
 
@@ -603,22 +574,13 @@
             const btn = document.createElement('div');
             btn.classList.add('q-num-btn');
             btn.innerText = i+1;
-            if (userAnswers[i] !== null && userAnswers[i] !== "") {
-                btn.classList.add('answered');
-            }
-            if (currentIndex === i) {
-                btn.classList.add('current');
-            }
-            if (!questions[i].isActive) {
-                btn.classList.add('disabled');
-            }
+            if (userAnswers[i] !== null && userAnswers[i] !== "") btn.classList.add('answered');
+            if (currentIndex === i) btn.classList.add('current');
+            if (!questions[i].isActive) btn.classList.add('disabled');
             btn.addEventListener('click', (function(idx) {
-                return function() { 
-                    if (questions[idx].isActive) {
-                        goToQuestion(idx);
-                    } else {
-                        alert("Câu hỏi này hiện chưa có nội dung.");
-                    }
+                return function() {
+                    if (questions[idx].isActive) goToQuestion(idx);
+                    else alert("Câu hỏi này hiện chưa có nội dung.");
                 };
             })(i));
             paletteContainer.appendChild(btn);
@@ -660,6 +622,7 @@
             const updateAnswer = (selectedVal) => {
                 userAnswers[currentIndex] = selectedVal;
                 renderPalette();
+                // Cập nhật class selected cho các div
                 optionDivs.forEach(div => {
                     const radio = div.querySelector('input[type="radio"]');
                     if (radio && radio.value === selectedVal) {
@@ -670,16 +633,20 @@
                 });
                 saveToLocalStorage();
             };
+            // Sự kiện change trên radio
             radioInputs.forEach(radio => {
                 radio.addEventListener('change', (e) => {
                     if (radio.checked) updateAnswer(radio.value);
                 });
             });
+            // Sự kiện click trên div - FIX: gọi trực tiếp updateAnswer
             optionDivs.forEach(div => {
                 div.addEventListener('click', (e) => {
                     const radio = div.querySelector('input[type="radio"]');
                     if (radio && !radio.checked) {
                         radio.checked = true;
+                        // Gọi trực tiếp updateAnswer để lưu ngay
+                        updateAnswer(radio.value);
                     }
                 });
             });
@@ -704,19 +671,13 @@
             return;
         }
         if (timerInterval) clearInterval(timerInterval);
-
-        const answersForApi = {
-            q1: userAnswers[0],
-            q2: userAnswers[1]
-        };
-
+        const answersForApi = { q1: userAnswers[0], q2: userAnswers[1] };
         const payload = {
             name: currentUser,
             code: "group3laso1",
             session_id: sessionId,
             answers: answersForApi
         };
-
         try {
             const res = await fetch('/submit', {
                 method: 'POST',
@@ -747,7 +708,6 @@
         const code = document.getElementById('accessCode').value.trim();
         const errorDiv = document.getElementById('loginError');
         errorDiv.innerText = "";
-        
         if (!name) {
             errorDiv.innerText = "Vui lòng nhập họ tên!";
             return;
@@ -756,18 +716,15 @@
             errorDiv.innerText = "Sai mã truy cập!";
             return;
         }
-        
         currentUser = name;
         studentNameSpan.innerText = `👤 ${escapeHtml(currentUser)}`;
-        
         try {
             const res = await fetch('/start', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name, code: code })
+                body: JSON.stringify({ name, code })
             });
             const data = await res.json();
-            
             if (res.ok) {
                 sessionId = data.session_id;
                 startTimeISO = data.start_time;
@@ -808,16 +765,9 @@
                 return;
             }
             tbody.innerHTML = leaderboard.map((item, idx) => `
-                <tr>
-                    <td>${idx+1}</td>
-                    <td>${escapeHtml(item.name)}</td>
-                    <td><strong>${item.score}/${totalQs}</strong></td>
-                    <td>${escapeHtml(item.duration_formatted)}</td>
-                </tr>
+                <tr><td>${idx+1}</td><td>${escapeHtml(item.name)}</td><td><strong>${item.score}/${totalQs}</strong></td><td>${escapeHtml(item.duration_formatted)}</td></tr>
             `).join('');
-        } catch(e) {
-            console.error(e);
-        }
+        } catch(e) { console.error(e); }
     }
 
     async function loadUserHistory(name) {
@@ -832,12 +782,7 @@
             let html = '<table class="history-table"><thead><tr><th>Lần</th><th>Điểm</th><th>Thời gian làm</th><th>Ngày nộp</th></tr></thead><tbody>';
             history.forEach((item, idx) => {
                 const total = item.score_display ? item.score_display.split('/')[1] : '2';
-                html += `<tr>
-                    <td>${idx+1}</td>
-                    <td><strong>${item.score}/${total}</strong></td>
-                    <td>${escapeHtml(item.duration_formatted)}</td>
-                    <td>${escapeHtml(item.submitted_at_display)}</td>
-                </tr>`;
+                html += `<tr><td>${idx+1}</td><td><strong>${item.score}/${total}</strong></td><td>${escapeHtml(item.duration_formatted)}</td><td>${escapeHtml(item.submitted_at_display)}</td></tr>`;
             });
             html += '</tbody></table>';
             historyContent.innerHTML = html;
@@ -884,13 +829,11 @@
         }
     }
 
-    // Event listeners
     document.getElementById('startExamBtn').addEventListener('click', startTest);
     document.getElementById('refreshLeaderboardBtn').addEventListener('click', loadLeaderboard);
     prevBtn.addEventListener('click', () => goToQuestion(currentIndex - 1));
     nextBtn.addEventListener('click', () => goToQuestion(currentIndex + 1));
     submitBtn.addEventListener('click', submitExam);
-
     document.getElementById('viewHistoryFromResultBtn').addEventListener('click', () => {
         document.getElementById('resultModal').style.display = 'none';
         showHistoryModal(lastSubmittedName);
