@@ -2,84 +2,534 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Hệ thống thi Nhóm 3</title>
     <style>
-        :root { --primary: #4f46e5; --bg: #f8fafc; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; }
-        .container { max-width: 600px; width: 100%; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        .hidden { display: none; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        button { width: 100%; background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .q-card { border: 1px solid #e2e8f0; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
-        .option { display: block; padding: 10px; background: #f8fafc; margin: 5px 0; border-radius: 6px; cursor: pointer; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f1f5f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Main container */
+        .exam-container {
+            max-width: 1400px;
+            width: 100%;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.15);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .exam-header {
+            background: #1e293b;
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .exam-header h2 {
+            font-weight: 600;
+            font-size: 1.35rem;
+            letter-spacing: -0.2px;
+        }
+        .student-info {
+            background: #0f172a;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Two column layout */
+        .exam-layout {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .question-area {
+            flex: 2.5;
+            background: #ffffff;
+            padding: 28px 30px;
+            min-width: 260px;
+        }
+        .sidebar {
+            flex: 1.2;
+            background: #f8fafc;
+            border-left: 1px solid #e2e8f0;
+            padding: 28px 20px;
+            min-width: 240px;
+        }
+
+        /* Timer card */
+        .timer-card {
+            background: white;
+            border-radius: 24px;
+            padding: 20px 16px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 32px;
+        }
+        .timer-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #475569;
+            font-weight: 600;
+        }
+        .timer-value {
+            font-size: 2.8rem;
+            font-weight: 700;
+            font-family: monospace;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+        /* Question palette */
+        .palette-title {
+            font-weight: 700;
+            margin-bottom: 18px;
+            font-size: 1.1rem;
+            border-left: 4px solid #4f46e5;
+            padding-left: 12px;
+        }
+        .question-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .q-num-btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 40px;
+            padding: 10px 0;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #1e293b;
+        }
+        .q-num-btn.answered {
+            background: #22c55e;
+            border-color: #22c55e;
+            color: white;
+        }
+        .q-num-btn.current {
+            background: #4f46e5;
+            border-color: #4f46e5;
+            color: white;
+            box-shadow: 0 4px 8px rgba(79,70,229,0.3);
+            transform: scale(1.02);
+        }
+        .q-num-btn.disabled {
+            opacity: 0.5;
+            background: #e2e8f0;
+            cursor: not-allowed;
+        }
+        .q-num-btn:not(.disabled):hover {
+            background: #e0e7ff;
+            border-color: #818cf8;
+        }
+
+        /* Question card */
+        .question-card {
+            animation: fade 0.2s ease;
+        }
+        @keyframes fade {
+            from { opacity: 0; transform: translateX(8px);}
+            to { opacity: 1; transform: translateX(0);}
+        }
+        .q-text {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 28px;
+            line-height: 1.4;
+            color: #0f172a;
+        }
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin: 24px 0 32px;
+        }
+        .option-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .option-item.selected {
+            background: #eef2ff;
+            border-color: #4f46e5;
+        }
+        .option-radio {
+            width: 20px;
+            height: 20px;
+            accent-color: #4f46e5;
+        }
+        .option-label {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #1e293b;
+        }
+        .placeholder-message {
+            background: #fef9c3;
+            border-left: 4px solid #eab308;
+            padding: 20px;
+            border-radius: 20px;
+            color: #854d0e;
+            font-weight: 500;
+            margin: 20px 0;
+        }
+        .nav-buttons {
+            display: flex;
+            gap: 16px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        .nav-btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .nav-btn.primary {
+            background: #4f46e5;
+            border-color: #4f46e5;
+            color: white;
+        }
+        .nav-btn:hover {
+            background: #e2e8f0;
+        }
+        .nav-btn.primary:hover {
+            background: #4338ca;
+        }
+        hr {
+            margin: 20px 0;
+            border-color: #eef2ff;
+        }
+        footer {
+            font-size: 0.7rem;
+            text-align: center;
+            padding: 16px;
+            background: #f1f5f9;
+            color: #475569;
+        }
+        @media (max-width: 780px) {
+            .exam-layout { flex-direction: column; }
+            .sidebar { border-left: none; border-top: 1px solid #e2e8f0; }
+            .question-area { padding: 20px; }
+            .q-text { font-size: 1.2rem; }
+        }
     </style>
 </head>
 <body>
-<div class="container">
+<div class="exam-container" id="app">
     <div id="login-screen">
-        <h2>NHÓM 3 - PHÒNG THI</h2>
-        <input type="text" id="name" placeholder="Họ và tên">
-        <input type="text" id="code" placeholder="Mã (group3laso1)">
-        <button onclick="startTest()">BẮT ĐẦU</button>
+        <div style="padding: 32px;">
+            <h2 style="margin-bottom: 20px;">NHÓM 3 - PHÒNG THI TRẮC NGHIỆM</h2>
+            <input type="text" id="name" placeholder="Họ và tên" style="width:100%; padding:14px; margin-bottom:16px; border-radius: 40px; border:1px solid #ccc;">
+            <input type="text" id="code" placeholder="Mã (group3laso1)" style="width:100%; padding:14px; margin-bottom:20px; border-radius: 40px; border:1px solid #ccc;">
+            <button id="startBtn" style="background:#4f46e5; color:white; border:none; padding:14px; border-radius: 40px; font-weight:bold; width:100%; cursor:pointer;">BẮT ĐẦU</button>
+        </div>
     </div>
 
-    <div id="quiz-screen" class="hidden">
-        <div id="questions-list">
-            <div class="q-card">
-                <p><strong>Câu 1:</strong> Trong Machine Learning, k-NN là gì?</p>
-                <label class="option"><input type="radio" name="q1" value="Lazy learner"> Lazy learner</label>
-                <label class="option"><input type="radio" name="q1" value="Eager learner"> Eager learner</label>
+    <div id="quiz-screen" style="display: none;">
+        <div class="exam-header">
+            <h2>📝 ĐỀ THI NHÓM 3 (MACHINE LEARNING)</h2>
+            <div class="student-info" id="studentNameDisplay"></div>
+        </div>
+        <div class="exam-layout">
+            <!-- Left: current question -->
+            <div class="question-area" id="questionArea">
+                <div class="question-card" id="dynamicQuestion">
+                    <!-- JS will inject content -->
+                </div>
+                <div class="nav-buttons">
+                    <button class="nav-btn" id="prevBtn">◀ Câu trước</button>
+                    <button class="nav-btn" id="nextBtn">Câu tiếp ▶</button>
+                    <button class="nav-btn primary" id="submitExamBtn">📌 NỘP BÀI</button>
+                </div>
             </div>
-            <div class="q-card">
-                <p><strong>Câu 2:</strong> RNN thường bị lỗi gì?</p>
-                <label class="option"><input type="radio" name="q2" value="Vanishing Gradient"> Vanishing Gradient</label>
-                <label class="option"><input type="radio" name="q2" value="Data Augmentation"> Data Augmentation</label>
+
+            <!-- Right: timer + palette -->
+            <div class="sidebar">
+                <div class="timer-card">
+                    <div class="timer-label">THỜI GIAN CÒN LẠI</div>
+                    <div class="timer-value" id="timerDisplay">90:00</div>
+                </div>
+                <div class="palette-title">📌 Bảng câu hỏi</div>
+                <div id="questionPaletteGrid" class="question-grid"></div>
+                <hr />
+                <div style="font-size:13px; color:#475569; margin-top: 20px;">
+                    ✅ Xanh lá: Đã trả lời &nbsp;&nbsp;⚪ Xám: Chưa làm<br>
+                    🔵 Xanh dương: Câu hiện tại
+                </div>
             </div>
         </div>
-        <button onclick="submitExam()">NỘP BÀI</button>
+        <footer>Hệ thống Nhóm 3 - Tự động lưu kết quả khi bấm nộp hoặc hết giờ</footer>
     </div>
 </div>
 
 <script>
-    let startTime;
-
-    function startTest() {
-        const name = document.getElementById('name').value;
-        const code = document.getElementById('code').value;
-        if (!name || code !== "group3laso1") {
-            alert("Sai mã hoặc chưa nhập tên!"); return;
+    // -------------------- DANH SÁCH CÂU HỎI (40 câu, 2 câu đầu demo) --------------------
+    const TOTAL_QS = 40;
+    // correct answers for scoring (only first 2 considered)
+    const CORRECT_ANSWERS = ["Lazy learner", "Vanishing Gradient"];
+    
+    // Build questions array
+    const questions = [];
+    for (let i = 0; i < TOTAL_QS; i++) {
+        if (i === 0) {
+            questions.push({
+                text: "Trong Machine Learning, k-NN là gì?",
+                options: ["Lazy learner", "Eager learner"],
+                isActive: true
+            });
+        } else if (i === 1) {
+            questions.push({
+                text: "RNN thường bị lỗi gì?",
+                options: ["Vanishing Gradient", "Data Augmentation"],
+                isActive: true
+            });
+        } else {
+            questions.push({
+                text: "Câu hỏi đang được cập nhật (Demo)",
+                options: [],
+                isActive: false,
+                placeholder: "📘 Nội dung câu hỏi sẽ sớm được bổ sung."
+            });
         }
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('quiz-screen').classList.remove('hidden');
-        startTime = new Date().toISOString();
     }
 
-    async function submitExam() {
-        const name = document.getElementById('name').value;
-        const code = document.getElementById('code').value;
-        const answers = {
-            q1: document.querySelector('input[name="q1"]:checked')?.value,
-            q2: document.querySelector('input[name="q2"]:checked')?.value
-        };
+    let userAnswers = new Array(TOTAL_QS).fill(null);   // lưu câu trả lời (string hoặc null)
+    let currentIndex = 0;      // 0-based
+    let timerInterval = null;
+    let timeLeftSeconds = 90 * 60;   // 90 phút = 5400 giây
+    let examStarted = false;
+    let studentName = "";
 
-        try {
-            const res = await fetch('/submit', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ name, code, answers, start_time: startTime })
+    // DOM elements
+    const loginDiv = document.getElementById('login-screen');
+    const quizDiv = document.getElementById('quiz-screen');
+    const startButton = document.getElementById('startBtn');
+    const nameInput = document.getElementById('name');
+    const codeInput = document.getElementById('code');
+    const studentNameSpan = document.getElementById('studentNameDisplay');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const paletteContainer = document.getElementById('questionPaletteGrid');
+    const dynamicQuestionDiv = document.getElementById('dynamicQuestion');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('submitExamBtn');
+
+    // Helper: format mm:ss
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // Update timer UI and check expiry
+    function updateTimerDisplay() {
+        timerDisplay.innerText = formatTime(timeLeftSeconds);
+        if (timeLeftSeconds <= 0) {
+            if (timerInterval) clearInterval(timerInterval);
+            alert("Hết thời gian! Hệ thống tự động nộp bài.");
+            submitExam();
+        }
+    }
+
+    function startTimer() {
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            if (timeLeftSeconds > 0) {
+                timeLeftSeconds--;
+                updateTimerDisplay();
+            } else {
+                clearInterval(timerInterval);
+            }
+        }, 1000);
+    }
+
+    // Render question palette (40 buttons)
+    function renderPalette() {
+        paletteContainer.innerHTML = '';
+        for (let i = 0; i < TOTAL_QS; i++) {
+            const btn = document.createElement('div');
+            btn.classList.add('q-num-btn');
+            btn.innerText = i+1;
+            // answered status: only if answer not null and question is active OR if any string stored
+            if (userAnswers[i] !== null && userAnswers[i] !== "") {
+                btn.classList.add('answered');
+            }
+            if (currentIndex === i) {
+                btn.classList.add('current');
+            }
+            if (!questions[i].isActive) {
+                btn.classList.add('disabled');
+            }
+            btn.addEventListener('click', (function(idx) {
+                return function() { 
+                    if (questions[idx].isActive) {
+                        goToQuestion(idx);
+                    } else {
+                        alert("Câu hỏi này hiện chưa có nội dung, vui lòng chờ cập nhật.");
+                    }
+                };
+            })(i));
+            paletteContainer.appendChild(btn);
+        }
+    }
+
+    // go to specific question and render
+    function goToQuestion(index) {
+        if (index < 0 || index >= TOTAL_QS) return;
+        currentIndex = index;
+        renderCurrentQuestion();
+        renderPalette();   // refresh highlight
+    }
+
+    // render current question + options
+    function renderCurrentQuestion() {
+        const q = questions[currentIndex];
+        if (!q) return;
+        let html = `<div class="q-text">Câu ${currentIndex+1}: ${q.text}</div>`;
+        if (q.isActive) {
+            html += `<div class="options-list" id="optionsList">`;
+            q.options.forEach(opt => {
+                const isChecked = (userAnswers[currentIndex] === opt);
+                const selectedClass = isChecked ? 'selected' : '';
+                html += `
+                    <div class="option-item ${selectedClass}" data-value="${opt.replace(/"/g, '&quot;')}">
+                        <input type="radio" name="questionOption" value="${opt.replace(/"/g, '&quot;')}" ${isChecked ? 'checked' : ''} class="option-radio">
+                        <span class="option-label">${opt}</span>
+                    </div>
+                `;
             });
-            const data = await res.json();
-            if (res.ok) {
-                alert(`Nộp thành công! Điểm: ${data.score}`);
+            html += `</div>`;
+        } else {
+            html += `<div class="placeholder-message">⚠️ ${q.placeholder || 'Nội dung đang được xây dựng'}<br><small>Bạn có thể bỏ qua câu này.</small></div>`;
+        }
+        dynamicQuestionDiv.innerHTML = html;
+
+        // attach event listeners for radio and highlight div click
+        if (q.isActive) {
+            const radioInputs = document.querySelectorAll('input[name="questionOption"]');
+            const optionDivs = document.querySelectorAll('.option-item');
+            const updateAnswer = (selectedVal) => {
+                userAnswers[currentIndex] = selectedVal;
+                renderPalette();   // update palette answered status
+                // update highlight style
+                optionDivs.forEach(div => {
+                    const val = div.getAttribute('data-value');
+                    if (val === selectedVal) div.classList.add('selected');
+                    else div.classList.remove('selected');
+                });
+            };
+            radioInputs.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    if (radio.checked) updateAnswer(radio.value);
+                });
+            });
+            optionDivs.forEach(div => {
+                div.addEventListener('click', (e) => {
+                    const radio = div.querySelector('input[type="radio"]');
+                    if (radio && !radio.checked) {
+                        radio.checked = true;
+                        updateAnswer(radio.value);
+                    }
+                });
+            });
+        }
+    }
+
+    // submit exam
+    async function submitExam() {
+        if (!examStarted) return;
+        if (timerInterval) clearInterval(timerInterval);
+        // prepare answers array (send full array of 40, null for unanswered)
+        const answersArray = [...userAnswers];
+        const payload = {
+            name: studentName,
+            code: "group3laso1",
+            answers_array: answersArray,
+            start_time: localStorage.getItem('exam_start_time') || new Date().toISOString()
+        };
+        try {
+            const response = await fetch('/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (response.ok) {
+                alert(`✅ Nộp bài thành công!\nĐiểm của bạn: ${result.score}/2`);
                 location.reload();
             } else {
-                alert(data.error);
+                alert(`Lỗi: ${result.error || 'Không thể nộp bài'}`);
             }
-        } catch (e) {
-            alert("Lỗi kết nối server!");
+        } catch (err) {
+            alert("Lỗi kết nối đến máy chủ. Vui lòng thử lại.");
         }
     }
+
+    // start exam
+    function startTest() {
+        const nameVal = nameInput.value.trim();
+        const codeVal = codeInput.value.trim();
+        if (!nameVal || codeVal !== "group3laso1") {
+            alert("Sai mã truy cập hoặc chưa nhập tên!");
+            return;
+        }
+        studentName = nameVal;
+        studentNameSpan.innerText = `👤 ${studentName}`;
+        loginDiv.style.display = 'none';
+        quizDiv.style.display = 'block';
+        examStarted = true;
+        localStorage.setItem('exam_start_time', new Date().toISOString());
+        // initialize answers
+        userAnswers.fill(null);
+        currentIndex = 0;
+        timeLeftSeconds = 90 * 60;
+        updateTimerDisplay();
+        startTimer();
+        renderCurrentQuestion();
+        renderPalette();
+        // navigation events
+        prevBtn.onclick = () => goToQuestion(currentIndex - 1);
+        nextBtn.onclick = () => goToQuestion(currentIndex + 1);
+        submitBtn.onclick = () => {
+            if (confirm("Bạn chắc chắn muốn nộp bài?")) submitExam();
+        };
+    }
+
+    startButton.addEventListener('click', startTest);
 </script>
 </body>
 </html>
