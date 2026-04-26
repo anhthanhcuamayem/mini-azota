@@ -102,7 +102,6 @@
             margin-bottom: 16px;
             color: #0f172a;
         }
-        /* Modal Azota */
         .modal {
             display: none;
             position: fixed;
@@ -153,11 +152,16 @@
             font-size: 0.8rem;
             padding: 8px;
         }
+        .loading {
+            text-align: center;
+            color: #64748b;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
 <div class="main-container">
-    <!-- KHUNG ĐĂNG NHẬP + THI -->
+    <!-- KHUNG ĐĂNG NHẬP -->
     <div class="card" id="loginCard">
         <div class="login-area">
             <h2>📚 NHÓM 3 - PHÒNG THI</h2>
@@ -167,15 +171,14 @@
         </div>
     </div>
 
+    <!-- KHUNG LÀM BÀI -->
     <div class="card quiz-card" id="quizCard">
         <div id="questionsContainer">
-            <!-- Câu 1 -->
             <div class="question-item" data-qid="1">
                 <div class="question-text">Câu 1: Trong Machine Learning, k-NN là gì?</div>
                 <label class="option"><input type="radio" name="q1" value="Lazy learner"> Lazy learner</label>
                 <label class="option"><input type="radio" name="q1" value="Eager learner"> Eager learner</label>
             </div>
-            <!-- Câu 2 -->
             <div class="question-item" data-qid="2">
                 <div class="question-text">Câu 2: RNN thường bị lỗi gì?</div>
                 <label class="option"><input type="radio" name="q2" value="Vanishing Gradient"> Vanishing Gradient</label>
@@ -194,14 +197,14 @@
                 <tr><th>#</th><th>Họ tên</th><th>Điểm</th><th>Thời gian</th></tr>
             </thead>
             <tbody id="leaderboardBody">
-                <tr><td colspan="4">Đang tải...</td></tr>
+                <tr><td colspan="4" class="loading">Đang tải...</td></tr>
             </tbody>
         </table>
         <button class="refresh-leaderboard" id="refreshLeaderboardBtn">🔄 Làm mới bảng</button>
     </div>
 </div>
 
-<!-- MODAL KẾT QUẢ (kiểu Azota) -->
+<!-- MODAL KẾT QUẢ -->
 <div id="resultModal" class="modal">
     <div class="modal-content">
         <h2>✅ HOÀN THÀNH</h2>
@@ -212,10 +215,9 @@
 </div>
 
 <script>
-    let examStartTime = null;
+    let sessionId = null;
     let currentUser = "";
 
-    // Helper: fetch leaderboard and render
     async function loadLeaderboard() {
         try {
             const res = await fetch('/leaderboard');
@@ -248,22 +250,18 @@
         });
     }
 
-    // Modal functions
     function showModal(score) {
         const modal = document.getElementById('resultModal');
         document.getElementById('modalScore').innerText = `${score}/2`;
         modal.style.display = 'flex';
     }
+
     window.closeModal = function() {
         document.getElementById('resultModal').style.display = 'none';
-        // Sau khi đóng modal, reload lại trang? Có thể giữ nguyên hoặc reload leaderboard
         loadLeaderboard();
-        // Reset giao diện về login? (tuỳ chọn, để tiện thi tiếp thì reload luôn)
-        // Để tránh nhập lại, cho phép làm bài mới bằng cách reload trang
         location.reload();
     }
 
-    // Kiểm tra tất cả các câu đã được chọn chưa (chỉ 2 câu)
     function checkAllQuestionsAnswered() {
         const q1Selected = document.querySelector('input[name="q1"]:checked');
         const q2Selected = document.querySelector('input[name="q2"]:checked');
@@ -275,13 +273,10 @@
         return true;
     }
 
-    // Nộp bài
     async function submitExam() {
         if (!checkAllQuestionsAnswered()) return;
-
-        const name = currentUser;
-        if (!name) {
-            alert("Vui lòng đăng nhập lại!");
+        if (!sessionId) {
+            alert("Lỗi: Không tìm thấy phiên làm bài!");
             return;
         }
 
@@ -289,12 +284,11 @@
         const q2Val = document.querySelector('input[name="q2"]:checked').value;
         const answers = { q1: q1Val, q2: q2Val };
 
-        // Gửi kèm start_time để tính thời gian làm bài
         const payload = {
-            name: name,
+            name: currentUser,
             code: "group3laso1",
-            answers: answers,
-            start_time: examStartTime
+            session_id: sessionId,
+            answers: answers
         };
 
         try {
@@ -305,9 +299,7 @@
             });
             const data = await res.json();
             if (res.ok) {
-                // Hiện modal điểm theo Azota
                 showModal(data.score);
-                // Load lại leaderboard (sẽ được gọi trong closeModal, nhưng gọi luôn để cập nhật)
                 loadLeaderboard();
             } else {
                 alert("Lỗi: " + (data.error || "Không thể nộp bài"));
@@ -317,30 +309,44 @@
         }
     }
 
-    // Bắt đầu làm bài: lưu thời gian, ẩn login, hiện quiz
-    function startTest() {
+    async function startTest() {
         const name = document.getElementById('fullname').value.trim();
         const code = document.getElementById('accessCode').value.trim();
+        
         if (!name || code !== "group3laso1") {
             alert("Sai mã truy cập hoặc chưa nhập họ tên!");
             return;
         }
+        
         currentUser = name;
-        examStartTime = new Date().toISOString();
-        document.getElementById('loginCard').style.display = 'none';
-        document.getElementById('quizCard').style.display = 'block';
-        // reset lỗi nếu có
-        document.getElementById('submitError').innerText = "";
-        // bỏ chọn radio cũ (nếu có)
-        document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+        
+        // Gọi server để bắt đầu phiên làm bài
+        try {
+            const res = await fetch('/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, code: code })
+            });
+            const data = await res.json();
+            
+            if (res.ok) {
+                sessionId = data.session_id;
+                document.getElementById('loginCard').style.display = 'none';
+                document.getElementById('quizCard').style.display = 'block';
+                document.getElementById('submitError').innerText = "";
+                document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+            } else {
+                alert(data.error || "Không thể bắt đầu bài thi!");
+            }
+        } catch (err) {
+            alert("Lỗi kết nối server!");
+        }
     }
 
-    // Event listeners
     document.getElementById('startExamBtn').addEventListener('click', startTest);
     document.getElementById('submitExam').addEventListener('click', submitExam);
     document.getElementById('refreshLeaderboardBtn').addEventListener('click', loadLeaderboard);
 
-    // Tải leaderboard ngay khi mở trang
     loadLeaderboard();
 </script>
 </body>
