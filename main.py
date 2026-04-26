@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 import os
 
@@ -10,18 +10,43 @@ ACCESS_CODE = "group3laso1"
 CORRECT_ANSWERS = {"q1": "Lazy learner", "q2": "Vanishing Gradient"}
 
 def get_vn_time():
-    return (datetime.utcnow() + timedelta(hours=7)).strftime("%H:%M:%S %d/%m/%Y")
+    """Trả về thời gian Việt Nam (GMT+7) dạng chuỗi"""
+    vn_tz = timezone(timedelta(hours=7))
+    return datetime.now(vn_tz).strftime("%H:%M:%S %d/%m/%Y")
 
 def compute_duration(start_iso_str):
-    """Tính số giây từ start_time đến hiện tại"""
+    """
+    Tính số giây từ start_time đến thời điểm hiện tại.
+    Xử lý cả trường hợp start_time có hoặc không có múi giờ.
+    """
     if not start_iso_str:
         return 999999
-    start = datetime.fromisoformat(start_iso_str)
-    now = datetime.utcnow()
-    return int((now - start).total_seconds())
+    
+    # Chuyển đổi start_time từ chuỗi ISO sang datetime
+    # Thay thế 'Z' bằng '+00:00' nếu có
+    start_str = start_iso_str.replace('Z', '+00:00')
+    
+    try:
+        start = datetime.fromisoformat(start_str)
+    except:
+        # Nếu parse lỗi, trả về thời gian lớn
+        return 999999
+    
+    # Lấy thời gian hiện tại theo UTC (có múi giờ)
+    now = datetime.now(timezone.utc)
+    
+    # Nếu start không có múi giờ, gán nó là UTC
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=timezone.utc)
+    
+    # Tính chênh lệch
+    diff = now - start
+    return int(diff.total_seconds())
 
 def format_duration(seconds):
-    """mm:ss"""
+    """Định dạng giây thành mm:ss"""
+    if seconds >= 999999:
+        return "Chưa rõ"
     mins = seconds // 60
     secs = seconds % 60
     return f"{mins:02d}:{secs:02d}"
@@ -35,11 +60,12 @@ async def get_home():
 async def handle_submit(request: Request):
     try:
         data = await request.json()
-        # Check mã
+        
+        # Kiểm tra mã truy cập
         if str(data.get("code")).strip().lower() != ACCESS_CODE:
             return JSONResponse(status_code=401, content={"error": "Mã truy cập sai!"})
         
-        # Kiểm tra đã trả lời hết câu chưa (phía client đã kiểm tra, nhưng server cũng kiểm tra an toàn)
+        # Kiểm tra đã trả lời hết câu chưa
         answers = data.get("answers", {})
         if not answers.get("q1") or not answers.get("q2"):
             return JSONResponse(status_code=400, content={"error": "Vui lòng trả lời tất cả câu hỏi!"})
@@ -65,7 +91,7 @@ async def handle_submit(request: Request):
                 except:
                     submissions = []
         
-        # Lưu bài nộp
+        # Lưu bài nộp mới
         new_entry = {
             "name": data.get("name", "Ẩn danh"),
             "score": score,
@@ -90,15 +116,17 @@ async def get_leaderboard():
     """Trả về top 3 người có điểm cao nhất (nếu bằng điểm thì ai làm nhanh hơn)"""
     if not os.path.exists(DATA_FILE):
         return []
+    
     with open(DATA_FILE, "r", encoding="utf-8") as f:
         try:
             submissions = json.load(f)
         except:
             return []
     
-    # Sắp xếp: điểm giảm dần, thời gian tăng dần
+    # Sắp xếp: điểm giảm dần, thời gian tăng dần (ai nhanh hơn xếp trên)
     sorted_subs = sorted(submissions, key=lambda x: (-x["score"], x["duration_sec"]))
     top3 = sorted_subs[:3]
+    
     # Chuẩn bị dữ liệu trả về
     result = []
     for item in top3:
@@ -111,6 +139,7 @@ async def get_leaderboard():
 
 @app.get("/admin-check-history")
 async def view_history():
+    """Xem toàn bộ lịch sử bài nộp (đường dẫn admin)"""
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
