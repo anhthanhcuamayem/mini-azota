@@ -15,7 +15,7 @@ app.mount("/images", StaticFiles(directory="images"), name="images")
 DATA_FILE = "history.json"
 SESSIONS_FILE = "sessions.json"
 ACCESS_CODE = "group3laso1"
-EXAM_DURATION_MINUTES = 90
+EXAM_DURATION_MINUTES = 60
 
 def get_vn_time():
     vn_tz = timezone(timedelta(hours=7))
