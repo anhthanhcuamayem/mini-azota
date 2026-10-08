@@ -1,3 +1,6 @@
 fastapi
 uvicorn
 python-multipart
+requests
+python-docx
+pypdf

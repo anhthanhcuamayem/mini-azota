@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal - Quản lý lớp học & đề thi</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+    :root { --p-bg: #f1f5f9; --p-card: #ffffff; --p-line: #e2e8f0; --p-mut: #64748b; --p-ink: #0f172a; --p-acc: #4f46e5; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--p-bg); color: var(--p-ink);
+           font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 18px 16px 60px; }
+    header.p-top { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+                   padding: 14px 0 18px; }
+    .brand { font-weight: 900; font-size: 1.15rem; display: flex; align-items: center; gap: 8px; }
+    .brand small { display: block; font-weight: 500; font-size: .74rem; color: var(--p-mut); }
+    .who { display: flex; align-items: center; gap: 10px; font-size: .88rem; }
+    .who .pill { background: var(--p-card); border: 1px solid var(--p-line); padding: 6px 12px;
+                 border-radius: 999px; font-weight: 700; }
+    .role-badge { font-size: .72rem; font-weight: 800; padding: 3px 8px; border-radius: 999px; color: #fff; }
+    .role-teacher { background: #4f46e5; } .role-student { background: #0ea5e9; }
+    .role-class_monitor { background: #f59e0b; } .role-team_leader { background: #10b981; }
+    .btn { border: 0; border-radius: 10px; padding: 9px 14px; font-weight: 700; font-size: .87rem;
+           cursor: pointer; background: var(--p-acc); color: #fff; }
+    .btn.sec { background: #e2e8f0; color: #0f172a; }
+    .btn.danger { background: #fee2e2; color: #b91c1c; }
+    .btn.ok { background: #d1fae5; color: #047857; }
+    .btn.sm { padding: 6px 10px; font-size: .78rem; }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+    .card { background: var(--p-card); border: 1px solid var(--p-line); border-radius: 16px;
+            padding: 18px; margin-bottom: 16px; }
+    .card h3 { margin: 0 0 4px; font-size: 1rem; }
+    .card .sub { color: var(--p-mut); font-size: .82rem; margin: 0 0 12px; }
+    .grid { display: grid; gap: 12px; }
+    .grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    label.fl { display: block; font-size: .78rem; font-weight: 800; color: var(--p-mut);
+               text-transform: uppercase; letter-spacing: .4px; margin: 10px 0 5px; }
+    input, select { width: 100%; padding: 10px 12px; border: 1px solid var(--p-line); border-radius: 10px;
+                    font-size: .92rem; background: #fff; color: inherit; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tab { padding: 9px 16px; border-radius: 999px; background: #e2e8f0; font-weight: 700;
+           font-size: .86rem; cursor: pointer; border: 0; }
+    .tab.active { background: var(--p-acc); color: #fff; }
+    table.pt { width: 100%; border-collapse: collapse; font-size: .86rem; }
+    table.pt th, table.pt td { padding: 9px 8px; border-bottom: 1px solid var(--p-line); text-align: left; }
+    table.pt th { color: var(--p-mut); font-size: .74rem; text-transform: uppercase; letter-spacing: .4px; }
+    .code { font-family: 'JetBrains Mono', monospace; font-weight: 800; background: #eef2ff;
+            padding: 3px 9px; border-radius: 7px; letter-spacing: 2px; }
+    .tag { font-size: .72rem; font-weight: 800; padding: 3px 8px; border-radius: 999px;
+           background: #e2e8f0; color: #475569; }
+    .tag.pub { background: #d1fae5; color: #047857; }
+    .tag.draft { background: #fef3c7; color: #b45309; }
+    .muted { color: var(--p-mut); font-size: .82rem; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .empty { text-align: center; color: var(--p-mut); padding: 26px 10px; font-size: .9rem; }
+    #toast { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 50; }
+    .toast { background: #0f172a; color: #fff; padding: 11px 15px; border-radius: 11px; font-size: .86rem;
+             box-shadow: 0 8px 24px rgba(0,0,0,.25); max-width: 340px; animation: pop .18s ease; }
+    .toast.err { background: #b91c1c; }
+    @keyframes pop { from { transform: translateY(8px); opacity: 0; } }
+    .auth-box { max-width: 460px; margin: 40px auto; }
+    .hidden { display: none !important; }
+    .member-sel { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .member-sel select { width: auto; padding: 6px 8px; font-size: .8rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <header class="p-top">
+        <div class="brand">🏫 Quản lý lớp học <small>Hệ thống khảo sát &amp; đánh giá trực tuyến</small></div>
+        <div class="who">
+            <span class="pill hidden" id="userPill"></span>
+            <button class="btn sec sm hidden" id="logoutBtn">Đăng xuất</button>
+        </div>
+    </header>
+
+    <!-- ================= ĐĂNG NHẬP / ĐĂNG KÝ ================= -->
+    <div class="card auth-box" id="authView">
+        <div class="tabs">
+            <button class="tab active" id="tabLogin">Đăng nhập</button>
+            <button class="tab" id="tabReg">Đăng ký</button>
+        </div>
+
+        <form id="loginForm">
+            <label class="fl" for="loginEmail">Email</label>
+            <input id="loginEmail" type="email" autocomplete="email" placeholder="gv@truong.edu" required>
+            <label class="fl" for="loginPass">Mật khẩu</label>
+            <input id="loginPass" type="password" autocomplete="current-password" placeholder="••••••" required>
+            <button class="btn" style="width:100%;margin-top:16px" type="submit">Đăng nhập</button>
+        </form>
+
+        <form id="regForm" class="hidden">
+            <label class="fl" for="regName">Họ và tên</label>
+            <input id="regName" maxlength="60" placeholder="Nguyễn Văn A" required>
+            <label class="fl" for="regEmail">Email</label>
+            <input id="regEmail" type="email" placeholder="email@truong.edu" required>
+            <label class="fl" for="regRole">Loại tài khoản</label>
+            <select id="regRole">
+                <option value="student">Học sinh</option>
+                <option value="teacher">Giáo viên</option>
+            </select>
+            <label class="fl" for="regPass">Mật khẩu (tối thiểu 6 ký tự)</label>
+            <input id="regPass" type="password" minlength="6" required>
+            <button class="btn" style="width:100%;margin-top:16px" type="submit">Tạo tài khoản</button>
+        </form>
+    </div>
+
+    <!-- ================= APP ================= -->
+    <div id="appView" class="hidden">
+        <div class="tabs" id="mainTabs"></div>
+        <div id="panel"></div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const state = { user: null, tab: '', classes: [], exams: [], currentClass: null, results: null };
+
+const $ = (id) => document.getElementById(id);
+function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function toast(msg, isErr) {
+    const el = document.createElement('div');
+    el.className = 'toast' + (isErr ? ' err' : '');
+    el.textContent = msg;
+    $('toast').appendChild(el);
+    setTimeout(() => el.remove(), 3600);
+}
+async function api(path, opts = {}) {
+    const init = { credentials: 'same-origin', ...opts };
+    init.headers = { ...(opts.headers || {}) };
+    if (opts.json !== undefined) {
+        init.headers['Content-Type'] = 'application/json';
+        init.body = JSON.stringify(opts.json);
+    }
+    const res = await fetch(path, init);
+    let data = null;
+    try { data = await res.json(); } catch (e) {}
+    if (!res.ok) throw new Error((data && data.error) || ('Lỗi ' + res.status));
+    return data;
+}
+const roleName = r => ({teacher:'Giáo viên', student:'Học sinh', class_monitor:'Lớp trưởng', team_leader:'Tổ trưởng'}[r] || r);
+
+async function boot() {
+    try {
+        const me = await api('/api/auth/me');
+        state.user = me.user;
+    } catch (e) { state.user = null; }
+    render();
+}
+
+function render() {
+    const logged = !!state.user;
+    $('authView').classList.toggle('hidden', logged);
+    $('appView').classList.toggle('hidden', !logged);
+    $('logoutBtn').classList.toggle('hidden', !logged);
+    $('userPill').classList.toggle('hidden', !logged);
+    if (!logged) return;
+    $('userPill').textContent = `${state.user.name} (${state.user.email})`;
+    const badge = state.user.role === 'teacher' ? 'role-teacher' : 'role-student';
+    if (!$('userPill').querySelector('.role-badge'))
+        $('userPill').insertAdjacentHTML('beforeend',
+            ` <span class="role-badge ${badge}">${roleName(state.user.role)}</span>`);
+    const tabs = state.user.role === 'teacher'
+        ? [['classes', 'Lớp học của tôi'], ['exams', 'Ngân hàng đề'], ['results', 'Bảng điểm']]
+        : [['classes', 'Lớp của tôi'], ['exams', 'Bài thi'], ['results', 'Điểm của tôi']];
+    if (!state.tab || !tabs.some(t => t[0] === state.tab)) state.tab = tabs[0][0];
+    $('mainTabs').innerHTML = tabs.map(([k, label]) =>
+        `<button class="tab ${state.tab === k ? 'active' : ''}" data-tab="${k}">${label}</button>`).join('');
+    $('mainTabs').querySelectorAll('.tab').forEach(b => b.onclick = () => { state.tab = b.dataset.tab; render(); });
+    loadTab();
+}
+
+async function loadTab() {
+    const panel = $('panel');
+    panel.innerHTML = '<div class="card"><div class="empty">Đang tải...</div></div>';
+    try {
+        if (state.tab === 'classes') await viewClasses();
+        else if (state.tab === 'exams') await viewExams();
+        else if (state.tab === 'results') await viewResults();
+    } catch (e) {
+        panel.innerHTML = `<div class="card"><div class="empty">⚠️ ${esc(e.message)}</div></div>`;
+    }
+}
+
+/* ---------------------------------------------------------- LỚP HỌC */
+async function viewClasses() {
+    const data = await api('/api/classes');
+    state.classes = data.classes;
+    const isTeacher = state.user.role === 'teacher';
+    let html = '';
+    if (isTeacher) {
+        html += `<div class="card"><h3>➕ Tạo lớp mới</h3>
+            <div class="row" style="margin-top:8px">
+                <input id="newClassName" placeholder="Tên lớp, ví dụ 12A1" style="max-width:220px">
+                <input id="newClassGrade" placeholder="Khối (tùy chọn)" style="max-width:130px">
+                <button class="btn" id="createClassBtn">Tạo lớp</button>
+            </div></div>`;
+    } else {
+        html += `<div class="card"><h3>🔑 Vào lớp bằng mã</h3>
+            <div class="row" style="margin-top:8px">
+                <input id="joinCode" placeholder="Mã 6 ký tự, ví dụ 45FE3C" style="max-width:220px; text-transform:uppercase">
+                <button class="btn" id="joinClassBtn">Vào lớp</button>
+            </div></div>`;
+    }
+    html += '<div class="grid cols-2">' + (state.classes.length ? state.classes.map(c => {
+        const mine = c.my_role;
+        const badge = c.is_teacher ? '<span class="role-badge role-teacher">Giáo viên CN</span>'
+            : (mine && mine !== 'student' ? `<span class="role-badge role-${mine}">${roleName(mine)}</span>` : '');
+        return `<div class="card" style="margin:0">
+            <h3>${esc(c.name)} ${c.grade ? `<span class="tag">Khối ${esc(c.grade)}</span>` : ''} ${badge}</h3>
+            <p class="sub">Mã lớp: <span class="code">${esc(c.join_code)}</span>
+                <button class="btn sec sm" data-copy="${esc(c.join_code)}">Sao chép</button>
+                · ${c.members.length} học sinh · ${c.teams.length} tổ</p>
+            <div class="row">
+                <button class="btn sm" data-open="${c.id}">Quản lý / Bảng điểm</button>
+            </div></div>`;
+    }).join('') : '<div class="empty">Chưa có lớp nào.</div>') + '</div>';
+    $('panel').innerHTML = html;
+
+    if (isTeacher) $('createClassBtn').onclick = async () => {
+        try {
+            await api('/api/classes', {method: 'POST', json: {
+                name: $('newClassName').value, grade: $('newClassGrade').value}});
+            toast('Đã tạo lớp ✓'); loadTab();
+        } catch (e) { toast(e.message, true); }
+    };
+    if (!isTeacher) $('joinClassBtn').onclick = async () => {
+        try {
+            await api('/api/classes/join', {method: 'POST', json: {code: $('joinCode').value}});
+            toast('Đã vào lớp ✓'); loadTab();
+        } catch (e) { toast(e.message, true); }
+    };
+    $('panel').querySelectorAll('[data-copy]').forEach(b => b.onclick = () => {
+        navigator.clipboard?.writeText(b.dataset.copy);
+        toast('Đã sao chép mã lớp: ' + b.dataset.copy);
+    });
+    $('panel').querySelectorAll('[data-open]').forEach(b => b.onclick = () => openClass(b.dataset.open));
+}
+
+async function openClass(classId) {
+    const { class: c } = await api('/api/classes/' + classId);
+    state.currentClass = c;
+    const canManage = c.is_teacher;
+    const canSeeScore = c.is_teacher || c.my_role === 'class_monitor' || c.my_role === 'team_leader';
+
+    let html = `<div class="card">
+        <div class="row" style="justify-content:space-between">
+            <div><h3>📖 ${esc(c.name)} ${c.grade ? `<span class="tag">Khối ${esc(c.grade)}</span>` : ''}</h3>
+            <p class="sub">Giáo viên: <b>${esc(c.teacher_name)}</b> · Mã lớp <span class="code">${esc(c.join_code)}</span>
+            ${c.my_role ? ` · Vai trò của bạn: <b>${roleName(c.my_role)}</b>` : ''}</p></div>
+            <button class="btn sec sm" id="backClasses">← Quay lại</button>
+        </div>`;
+
+    if (canManage) {
+        html += `<div class="row" style="margin-top:6px">
+            <input id="newTeamName" placeholder="Tên tổ mới" style="max-width:200px">
+            <button class="btn sm" id="addTeamBtn">➕ Thêm tổ</button>
+        </div>
+        <div class="row" style="margin-top:8px">${c.teams.length ? c.teams.map(t =>
+            `<span class="tag">${esc(t.name)} <button class="btn danger sm" data-delteam="${t.id}">✕</button></span>`
+        ).join('') : '<span class="muted">Chưa có tổ nào.</span>'}</div>`;
+    }
+    html += `<div style="overflow-x:auto;margin-top:14px"><table class="pt">
+        <thead><tr><th>Họ tên</th><th>Email</th><th>Tổ</th><th>Vai trò</th>${canManage ? '<th></th>' : ''}</tr></thead><tbody>`;
+    for (const m of c.members) {
+        const roleTag = m.role === 'student' ? '<span class="tag">Học sinh</span>'
+            : `<span class="role-badge role-${m.role}">${roleName(m.role)}</span>`;
+        const teamSel = canManage
+            ? `<select data-team="${m.user_id}"><option value="">-- Không tổ --</option>` +
+              c.teams.map(t => `<option value="${t.id}" ${m.team_id === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('') +
+              '</select>'
+            : esc((c.teams.find(t => t.id === m.team_id) || {}).name || '-');
+        const roleSel = canManage
+            ? `<select data-role="${m.user_id}">
+                 <option value="student" ${m.role === 'student' ? 'selected' : ''}>Học sinh</option>
+                 <option value="class_monitor" ${m.role === 'class_monitor' ? 'selected' : ''}>Lớp trưởng</option>
+                 <option value="team_leader" ${m.role === 'team_leader' ? 'selected' : ''}>Tổ trưởng</option>
+               </select>`
+            : roleTag;
+        html += `<tr><td><b>${esc(m.name)}</b></td><td class="muted">${esc(m.email)}</td>
+            <td>${teamSel}</td><td>${roleSel}</td>
+            ${canManage ? `<td><button class="btn danger sm" data-del="${m.user_id}">Xóa</button></td>` : ''}</tr>`;
+    }
+    if (!c.members.length) html += `<tr><td colspan="5" class="empty">Chưa có học sinh. Chia sẻ mã lớp ${esc(c.join_code)}.</td></tr>`;
+    html += '</tbody></table></div>';
+
+    if (c.exams.length) {
+        html += `<h3 style="margin-top:16px">📝 Đề thi của lớp</h3><div class="row">` +
+            c.exams.map(e => `<span class="tag ${e.published ? 'pub' : 'draft'}">${esc(e.title)} · ${e.question_count} câu</span>`).join('') +
+            '</div>';
+    }
+    html += '</div>';
+    if (canSeeScore) html += '<div id="scoreArea"></div>';
+    $('panel').innerHTML = html;
+
+    $('backClasses').onclick = () => loadTab();
+    if (canManage) {
+        $('addTeamBtn').onclick = async () => {
+            try {
+                await api(`/api/classes/${c.id}/teams`, {method: 'POST', json: {name: $('newTeamName').value}});
+                toast('Đã thêm tổ ✓'); openClass(c.id);
+            } catch (e) { toast(e.message, true); }
+        };
+        $('panel').querySelectorAll('[data-delteam]').forEach(b => b.onclick = async () => {
+            try { await api(`/api/classes/${c.id}/teams/${b.dataset.delteam}`, {method: 'DELETE'});
+                  toast('Đã xóa tổ'); openClass(c.id); } catch (e) { toast(e.message, true); }
+        });
+        $('panel').querySelectorAll('[data-role]').forEach(sel => sel.onchange = async () => {
+            try {
+                await api(`/api/classes/${c.id}/members/${sel.dataset.role}`,
+                          {method: 'PATCH', json: {role: sel.value}});
+                toast('Đã cập nhật vai trò ✓'); openClass(c.id);
+            } catch (e) { toast(e.message, true); loadTab(); }
+        });
+        $('panel').querySelectorAll('[data-team]').forEach(sel => sel.onchange = async () => {
+            try {
+                await api(`/api/classes/${c.id}/members/${sel.dataset.team}`,
+                          {method: 'PATCH', json: {team_id: sel.value}});
+                toast('Đã xếp tổ ✓');
+            } catch (e) { toast(e.message, true); openClass(c.id); }
+        });
+        $('panel').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+            try { await api(`/api/classes/${c.id}/members/${b.dataset.del}`, {method: 'DELETE'});
+                  toast('Đã xóa thành viên'); openClass(c.id); } catch (e) { toast(e.message, true); }
+        });
+    }
+    if (canSeeScore) await renderClassScores(c.id, $('scoreArea'));
+}
+
+async function renderClassScores(classId, mount) {
+    mount.innerHTML = '<div class="card"><div class="empty">Đang tải bảng điểm...</div></div>';
+    try {
+        const data = await api(`/api/classes/${classId}/results`);
+        const best = r => r.best_score === null ? '—' : `${r.best_score}/40`;
+        let html = `<div class="card"><div class="row" style="justify-content:space-between">
+            <div><h3>🏆 Bảng điểm lớp</h3>
+            <p class="sub">${esc(data.class.name)} · Xem với tư cách: <b>${roleName(data.access)}</b>
+            ${data.note ? ' · ' + esc(data.note) : ''}</p></div>
+            <button class="btn ok sm" id="csvBtn">⬇ Xuất CSV</button></div>
+            <table class="pt"><thead><tr><th>#</th><th>Học sinh</th><th>Tổ</th><th>Vai trò</th>
+            <th>Số lần nộp</th><th>Điểm cao nhất</th></tr></thead><tbody>`;
+        data.rows.forEach((r, i) => {
+            html += `<tr><td>${i + 1}</td><td><b>${esc(r.name)}</b></td><td>${esc(r.team)}</td>
+                <td>${r.role === 'student' ? '<span class="tag">HS</span>'
+                    : `<span class="role-badge role-${r.role}">${roleName(r.role)}</span>`}</td>
+                <td>${r.attempts}</td><td><b>${best(r)}</b></td></tr>`;
+        });
+        if (!data.rows.length) html += '<tr><td colspan="6" class="empty">Chưa có học sinh.</td></tr>';
+        html += `</tbody></table>
+            <p class="sub" style="margin-top:12px">Chi tiết ${data.attempts.length} lượt nộp</p>
+            <div style="max-height:240px;overflow:auto"><table class="pt">
+            <thead><tr><th>Thời gian</th><th>Học sinh</th><th>Đề</th><th>Điểm</th></tr></thead><tbody>`;
+        data.attempts.slice(0, 50).forEach(a => {
+            html += `<tr><td class="muted">${esc((a.submitted_at || '').replace('T', ' ').slice(0, 16))}</td>
+                <td>${esc(a.user_name)}</td><td>${esc(a.exam_title)}</td>
+                <td><b>${a.score}/${a.total}</b></td></tr>`;
+        });
+        html += '</tbody></table></div></div>';
+        mount.innerHTML = html;
+        $('csvBtn').onclick = () => {
+            const lines = ['Stt,Ho ten,To,Vai tro,So lan nop,Diem cao nhat']
+                .concat(data.rows.map((r, i) =>
+                    [i + 1, r.name, r.team, roleName(r.role), r.attempts, r.best_score ?? '']
+                        .map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')));
+            const blob = new Blob(['\uFEFF' + lines.join('\n')], {type: 'text/csv;charset=utf-8'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `bang-diem-${data.class.name}.csv`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        };
+    } catch (e) { mount.innerHTML = `<div class="card"><div class="empty">⚠️ ${esc(e.message)}</div></div>`; }
+}
+
+/* ---------------------------------------------------------- ĐỀ THI */
+async function viewExams() {
+    const isTeacher = state.user.role === 'teacher';
+    const data = await api('/api/exams');
+    state.exams = data.exams;
+    const classes = (await api('/api/classes')).classes;
+    let html = '';
+
+    if (isTeacher) {
+        html += `<div class="card"><h3>➕ Tạo đề thi mới (AI sinh 40 câu từ tài liệu)</h3>
+            <p class="sub">Nhận file .pdf / .docx / .txt (tối đa 5MB). AI đọc tài liệu và ra 40 câu trắc nghiệm.</p>
+            <label class="fl" for="examTitle">Tên đề</label>
+            <input id="examTitle" placeholder="Ví dụ: Đề thi thử THPT - Tuần 3" maxlength="120">
+            <div class="grid cols-2">
+                <div><label class="fl" for="examDuration">Thời lượng (phút)</label>
+                     <input id="examDuration" type="number" value="60" min="1" max="300"></div>
+                <div><label class="fl" for="examFile">Tài liệu</label>
+                     <input id="examFile" type="file" accept=".pdf,.docx,.txt,.md"></div>
+            </div>
+            <label class="fl">Gán ngay cho lớp (tùy chọn)</label>
+            <div class="row">${classes.length ? classes.map(c =>
+                `<label class="tag" style="cursor:pointer"><input type="checkbox" class="clsPick" value="${c.id}" style="width:auto"> ${esc(c.name)}</label>`
+            ).join('') : '<span class="muted">Chưa có lớp.</span>'}</div>
+            <button class="btn" id="createExamBtn" style="margin-top:14px">🤖 Tạo đề với AI</button>
+            <span class="muted" id="examHint"></span></div>`;
+    }
+
+    html += '<div class="grid cols-2">' + (state.exams.length ? state.exams.map(e => {
+        const clsNames = e.class_ids.map(id => (classes.find(c => c.id === id) || {}).name || id).join(', ');
+        const picked = state.user.role === 'teacher'
+            ? classes.filter(c => e.class_ids.includes(c.id)).map(c => c.id) : [];
+        return `<div class="card" style="margin:0">
+            <h3>${esc(e.title)} <span class="tag ${e.published ? 'pub' : 'draft'}">${e.published ? 'ĐANG MỞ' : 'BẢN NHÁP'}</span></h3>
+            <p class="sub">${e.question_count} câu · ${e.duration_minutes} phút · ${esc(e.filename || 'không có file')}
+             ${clsNames ? ' · Lớp: ' + esc(clsNames) : ''}</p>`;
+    }).join('') : '<div class="empty">Chưa có đề nào.</div>') + '</div>';
+
+    if (isTeacher) {
+        html += '<div id="examDetail"></div>';
+    } else {
+        html += `<div class="grid cols-2" style="margin-top:4px">` + (state.exams.length ? state.exams.map(e => `
+            <div class="card" style="margin:0">
+                <h3>${esc(e.title)}</h3>
+                <p class="sub">${e.question_count} câu · ${e.duration_minutes} phút
+                 · ${e.done ? '✅ Đã nộp bài' : 'Chưa làm'}</p>
+                ${e.done ? '<span class="tag pub">Đã hoàn thành</span>'
+                         : `<button class="btn" data-start="${e.id}">🎓 Vào phòng thi</button>`}
+            </div>`).join('') : '<div class="empty">Chưa có bài thi nào được gán cho bạn.</div>') + '</div>';
+    }
+    $('panel').innerHTML = html;
+
+    if (isTeacher) {
+        $('createExamBtn').onclick = async () => {
+            const file = $('examFile').files[0];
+            if (!$('examTitle').value.trim()) return toast('Nhập tên đề trước', true);
+            if (!file) return toast('Chọn tài liệu để AI sinh câu hỏi', true);
+            const fd = new FormData();
+            fd.append('title', $('examTitle').value.trim());
+            fd.append('duration_minutes', $('examDuration').value || 60);
+            fd.append('file', file);
+            const ids = [...document.querySelectorAll('.clsPick:checked')].map(c => c.value);
+            fd.append('class_ids', JSON.stringify(ids));
+            const btn = $('createExamBtn');
+            btn.disabled = true; btn.textContent = 'Đang chờ AI sinh 40 câu (30-60s)...';
+            try {
+                const r = await api('/api/exams', {method: 'POST', body: fd});
+                toast(`Đã tạo đề "${r.exam.title}" với ${r.exam.question_count} câu ✓`);
+                loadTab();
+            } catch (e) { toast(e.message, true); btn.disabled = false; btn.textContent = '🤖 Tạo đề với AI'; }
+        };
+        $('panel').querySelectorAll('[data-start]').forEach(() => {});
+        await renderExamDetail();
+    } else {
+        $('panel').querySelectorAll('[data-start]').forEach(b => b.onclick = () => {
+            location.href = '/?exam=' + b.dataset.start;
+        });
+    }
+}
+
+async function renderExamDetail() {
+    const mount = $('examDetail');
+    if (!mount) return;
+    const classes = (await api('/api/classes')).classes;
+    let html = '<div class="card"><h3>🗂 Quản lý đề</h3><div style="overflow-x:auto"><table class="pt"><thead><tr>' +
+        '<th>Đề</th><th>Trạng thái</th><th>Lớp được gán</th><th></th></tr></thead><tbody>';
+    for (const e of state.exams) {
+        const names = e.class_ids.map(id => (classes.find(c => c.id === id) || {}).name || id).join(', ');
+        html += `<tr data-row="${e.id}">
+            <td><b>${esc(e.title)}</b><div class="muted">${e.question_count} câu · ${e.duration_minutes} phút</div></td>
+            <td><span class="tag ${e.published ? 'pub' : 'draft'}">${e.published ? 'ĐANG MỞ' : 'BẢN NHÁP'}</span></td>
+            <td>${names ? esc(names) : '<span class="muted">chưa gán</span>'}
+                <div class="muted" style="margin-top:4px">${classes.map(c =>
+                    `<label style="font-size:.78rem"><input type="checkbox" class="pick_${e.id}" value="${c.id}"
+                     ${e.class_ids.includes(c.id) ? 'checked' : ''} style="width:auto"> ${esc(c.name)}</label>`
+                ).join(' ')}</div></td>
+            <td class="row" style="min-width:250px">
+                <button class="btn sm" data-assign="${e.id}">Gán lớp</button>
+                <button class="btn ${e.published ? 'sec' : 'ok'} sm" data-pub="${e.id}">${e.published ? 'Ẩn đề' : 'Đăng đề'}</button>
+                <button class="btn sec sm" data-regen="${e.id}">🎲 Sinh lại</button>
+                <button class="btn sec sm" data-score="${e.id}">🏆 Điểm</button>
+                <button class="btn danger sm" data-del="${e.id}">Xóa</button>
+            </td></tr>`;
+    }
+    if (!state.exams.length) html += '<tr><td colspan="4" class="empty">Chưa có đề nào.</td></tr>';
+    html += '</tbody></table></div></div><div id="examScore"></div>';
+    mount.innerHTML = html;
+
+    mount.querySelectorAll('[data-assign]').forEach(b => b.onclick = async () => {
+        const ids = [...mount.querySelectorAll(`.pick_${b.dataset.assign}:checked`)].map(c => c.value);
+        try { await api(`/api/exams/${b.dataset.assign}/assign`, {method: 'POST', json: {class_ids: ids}});
+              toast('Đã gán lớp ✓'); loadTab(); } catch (e) { toast(e.message, true); }
+    });
+    mount.querySelectorAll('[data-pub]').forEach(b => b.onclick = async () => {
+        const exam = state.exams.find(x => x.id === b.dataset.pub);
+        try { await api(`/api/exams/${b.dataset.pub}/publish`, {method: 'POST', json: {published: !exam.published}});
+              toast(exam.published ? 'Đã ẩn đề' : 'Đã đăng đề - học sinh thấy ngay ✓'); loadTab(); } catch (e) { toast(e.message, true); }
+    });
+    mount.querySelectorAll('[data-regen]').forEach(b => b.onclick = async () => {
+        b.disabled = true;
+        try { await api(`/api/exams/${b.dataset.regen}/regenerate`, {method: 'POST'});
+              toast('Đã sinh lại 40 câu ✓'); loadTab(); } catch (e) { toast(e.message, true); b.disabled = false; }
+    });
+    mount.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+        if (!confirm('Xóa đề này? Hành động không hoàn tác.')) return;
+        try { await api(`/api/exams/${b.dataset.del}`, {method: 'DELETE'}); toast('Đã xóa đề'); loadTab(); }
+        catch (e) { toast(e.message, true); }
+    });
+    mount.querySelectorAll('[data-score]').forEach(b => b.onclick = async () => {
+        try {
+            const data = await api(`/api/exams/${b.dataset.score}/results`);
+            let rows = `<div class="card"><h3>🏆 Kết quả: ${esc(data.exam.title)}</h3>
+                <table class="pt"><thead><tr><th>#</th><th>Học sinh</th><th>Điểm</th><th>Thời gian làm</th></tr></thead><tbody>`;
+            data.results.forEach((r, i) => rows += `<tr><td>${i + 1}</td><td>${esc(r.user_name)}</td>
+                <td><b>${r.score}/${r.total}</b></td><td class="muted">${Math.floor(r.duration_sec / 60)}:${String(r.duration_sec % 60).padStart(2, '0')}</td></tr>`);
+            if (!data.results.length) rows += '<tr><td colspan="4" class="empty">Chưa ai nộp bài.</td></tr>';
+            $('examScore').innerHTML = rows + '</tbody></table></div>';
+            $('examScore').scrollIntoView({behavior: 'smooth'});
+        } catch (e) { toast(e.message, true); }
+    });
+}
+
+/* ---------------------------------------------------------- ĐIỂM */
+async function viewResults() {
+    if (state.user.role === 'teacher') {
+        const data = await api('/api/classes');
+        if (!data.classes.length) {
+            $('panel').innerHTML = '<div class="card"><div class="empty">Bạn chưa có lớp nào. Vào tab "Lớp học" để tạo.</div></div>';
+            return;
+        }
+        $('panel').innerHTML = '<div class="card"><h3>🏆 Chọn lớp để xem bảng điểm</h3><div class="row" style="margin-top:10px">' +
+            data.classes.map(c => `<button class="btn sm" data-score="${c.id}">${esc(c.name)}</button>`).join('') +
+            '</div></div><div id="scoreMount"></div>';
+        $('panel').querySelectorAll('[data-score]').forEach(b => b.onclick = () => renderClassScores(b.dataset.score, $('scoreMount')));
+        await renderClassScores(data.classes[0].id, $('scoreMount'));
+        return;
+    }
+    const mine = await api('/api/me/attempts');
+    const classes = (await api('/api/classes')).classes;
+    let html = '<div class="card"><h3>📜 Lịch sử bài thi của tôi</h3><table class="pt"><thead><tr>' +
+        '<th>Thời gian</th><th>Đề</th><th>Điểm</th><th>Thời gian làm</th></tr></thead><tbody>';
+    mine.attempts.forEach(a => {
+        const m = Math.floor(a.duration_sec / 60), s = a.duration_sec % 60;
+        html += `<tr><td class="muted">${esc((a.submitted_at || '').replace('T', ' ').slice(0, 16))}</td>
+            <td>${esc(a.exam_title)}</td><td><b>${a.score}/${a.total}</b></td><td>${m}:${String(s).padStart(2, '0')}</td></tr>`;
+    });
+    if (!mine.attempts.length) html += '<tr><td colspan="4" class="empty">Bạn chưa nộp bài nào.</td></tr>';
+    html += '</tbody></table></div>';
+
+    const privileged = classes.filter(c => c.my_role === 'class_monitor' || c.my_role === 'team_leader');
+    html += '<div class="grid cols-2">' + privileged.map(c =>
+        `<div class="card" style="margin:0"><h3>${esc(c.name)} <span class="role-badge role-${c.my_role}">${roleName(c.my_role)}</span></h3>
+         <p class="sub">Xem bảng điểm ${c.my_role === 'team_leader' ? 'của tổ bạn' : 'cả lớp'}</p>
+         <button class="btn sm" data-classscore="${c.id}">🏆 Mở bảng điểm</button></div>`).join('') + '</div>';
+    if (!privileged.length && state.user.role === 'student') {
+        html += '<div class="card"><div class="muted">Bạn chưa là lớp trưởng/tổ trưởng nên chưa có bảng điểm riêng - điểm cá nhân nằm ở trên.</div></div>';
+    }
+    html += '<div id="scoreMount"></div>';
+    $('panel').innerHTML = html;
+    $('panel').querySelectorAll('[data-classscore]').forEach(b => b.onclick = () => renderClassScores(b.dataset.classscore, $('scoreMount')));
+}
+
+/* ---------------------------------------------------------- AUTH */
+$('tabLogin').onclick = () => { $('tabLogin').classList.add('active'); $('tabReg').classList.remove('active');
+    $('loginForm').classList.remove('hidden'); $('regForm').classList.add('hidden'); };
+$('tabReg').onclick = () => { $('tabReg').classList.add('active'); $('tabLogin').classList.remove('active');
+    $('regForm').classList.remove('hidden'); $('loginForm').classList.add('hidden'); };
+
+$('loginForm').onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+        const r = await api('/api/auth/login', {method: 'POST', json: {
+            email: $('loginEmail').value, password: $('loginPass').value}});
+        state.user = r.user; state.tab = ''; toast(`Xin chào ${r.user.name} 👋`); render();
+    } catch (err) { toast(err.message, true); }
+};
+$('regForm').onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+        const r = await api('/api/auth/register', {method: 'POST', json: {
+            name: $('regName').value, email: $('regEmail').value,
+            role: $('regRole').value, password: $('regPass').value}});
+        state.user = r.user; state.tab = ''; toast('Tạo tài khoản thành công 🎉'); render();
+    } catch (err) { toast(err.message, true); }
+};
+$('logoutBtn').onclick = async () => { await api('/api/auth/logout', {method: 'POST'}); location.reload(); };
+
+boot();
+</script>
+</body>
+</html>

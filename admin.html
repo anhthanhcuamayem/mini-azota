@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản trị - Tạo đề thi từ tài liệu (AI)</title>
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        body { max-width: 780px; margin: 40px auto; padding: 0 16px; }
+        .admin-card {
+            background: var(--bg-card, #fff); border: 1px solid var(--border-color, #e5e7eb);
+            border-radius: 16px; padding: 24px; margin-bottom: 20px;
+            box-shadow: 0 4px 16px rgba(0,0,0,.06);
+        }
+        .admin-card h2 { margin: 0 0 6px; font-size: 1.15rem; }
+        .admin-card p.hint { color: var(--text-muted, #6b7280); font-size: .9rem; margin: 0 0 16px; }
+        .admin-label { display: block; font-weight: 700; font-size: .88rem; margin: 14px 0 6px; }
+        .admin-input, .admin-select {
+            width: 100%; padding: 10px 12px; border: 1px solid var(--border-color, #e5e7eb);
+            border-radius: 10px; font-size: .95rem; background: var(--bg-card, #fff); color: inherit;
+        }
+        .admin-btn {
+            margin-top: 18px; width: 100%; padding: 12px; border: 0; border-radius: 12px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff;
+            font-weight: 800; font-size: 1rem; cursor: pointer;
+        }
+        .admin-btn:disabled { opacity: .6; cursor: not-allowed; }
+        .admin-btn.secondary { background: #475569; }
+        .admin-msg { margin-top: 14px; padding: 12px; border-radius: 10px; font-size: .9rem; display: none; white-space: pre-wrap; }
+        .admin-msg.ok { display: block; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+        .admin-msg.err { display: block; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+        .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+        .status-item { background: var(--bg-card-sub, #f8fafc); border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 10px 12px; font-size: .88rem; }
+        .status-item b { display: block; color: var(--text-muted, #6b7280); font-size: .78rem; text-transform: uppercase; letter-spacing: .4px; }
+        .badge-ok { color: #047857; font-weight: 800; }
+        .badge-warn { color: #b45309; font-weight: 800; }
+        .top-links { display: flex; gap: 12px; margin-bottom: 18px; font-size: .9rem; }
+        .top-links a { color: #4f46e5; text-decoration: none; font-weight: 700; }
+        .mode-desc { font-size: .82rem; color: var(--text-muted, #6b7280); margin-top: 6px; }
+    </style>
+</head>
+<body>
+    <div class="top-links">
+        <a href="/">&#8592; Về trang thi</a>
+    </div>
+
+    <div class="admin-card">
+        <h2>&#128273; Cấu hình AI API</h2>
+        <p class="hint">Nhập thông tin API và bấm test. Chỉ lưu trên máy chủ sau khi test thành công.</p>
+        <form id="apiForm">
+            <label class="admin-label" for="apiBaseUrl">Base URL</label>
+            <input class="admin-input" id="apiBaseUrl" type="url" placeholder="https://example.com/v1" required>
+            <label class="admin-label" for="apiModel">Model</label>
+            <input class="admin-input" id="apiModel" value="llama-3.3-70b-versatile" required>
+            <label class="admin-label" for="apiKey">API key</label>
+            <input class="admin-input" id="apiKey" type="password" autocomplete="new-password" placeholder="Nhập API key" required>
+            <div id="adminKeyWrap" style="display:none;">
+                <label class="admin-label" for="adminKey">Admin key</label>
+                <input class="admin-input" type="password" id="adminKey" autocomplete="off" placeholder="Nhập ADMIN_KEY">
+            </div>
+            <button class="admin-btn" type="submit" id="testApiBtn">Test API và lưu</button>
+        </form>
+        <div class="admin-msg" id="apiMsg"></div>
+    </div>
+
+    <div class="admin-card">
+        <h2>&#128218; Tạo đề thi từ tài liệu (Word / PDF / Text)</h2>
+        <p class="hint">Tải tài liệu lên, AI sẽ trích nội dung và sinh bộ 40 câu trắc nghiệm. Không dùng bộ đề có sẵn.</p>
+
+        <form id="uploadForm">
+            <label class="admin-label" for="fileInput">File tài liệu (.pdf, .doc, .docx, .txt, .md - tối đa 5MB)</label>
+            <input class="admin-input" type="file" id="fileInput" name="file" accept=".pdf,.doc,.docx,.txt,.md" required>
+
+            <label class="admin-label" for="modeSelect">Chế độ đề</label>
+            <select class="admin-select" id="modeSelect" name="mode">
+                <option value="shared">Một đề chung - AI sinh 1 lần, mọi thí sinh thi cùng bộ đề</option>
+                <option value="random">Đề ngẫu nhiên - mỗi lượt thi AI sinh bộ 40 câu mới</option>
+            </select>
+            <div class="mode-desc">"Đề ngẫu nhiên" tốn token và chậm hơn mỗi lượt (~30-60s), chỉ dùng khi muốn mỗi thí sinh một đề.</div>
+
+            <button class="admin-btn" type="submit" id="uploadBtn">Tải lên &amp; tạo đề</button>
+        </form>
+        <div class="admin-msg" id="uploadMsg"></div>
+    </div>
+
+    <div class="admin-card">
+        <h2>&#128200; Trạng thái</h2>
+        <div class="status-grid" id="statusGrid"><span class="hint">Đang tải...</span></div>
+        <button class="admin-btn secondary" type="button" id="regenBtn" style="display:none;">Sinh lại bộ đề từ tài liệu này</button>
+        <div class="admin-msg" id="regenMsg"></div>
+    </div>
+
+    <script>
+        const uploadForm = document.getElementById('uploadForm');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const uploadMsg = document.getElementById('uploadMsg');
+        const regenBtn = document.getElementById('regenBtn');
+        const regenMsg = document.getElementById('regenMsg');
+        const apiForm = document.getElementById('apiForm');
+        const apiMsg = document.getElementById('apiMsg');
+        const testApiBtn = document.getElementById('testApiBtn');
+
+        function showMsg(el, text, ok) {
+            el.className = 'admin-msg ' + (ok ? 'ok' : 'err');
+            el.textContent = text;
+        }
+        function esc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+        }
+        function key() { return document.getElementById('adminKey').value; }
+
+        apiForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            testApiBtn.disabled = true;
+            testApiBtn.textContent = 'Đang kiểm tra...';
+            apiMsg.className = 'admin-msg';
+            try {
+                const res = await fetch('/admin/test-api', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({base_url: document.getElementById('apiBaseUrl').value,
+                        api_key: document.getElementById('apiKey').value,
+                        model: document.getElementById('apiModel').value, admin_key: key()})
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || ('Lỗi ' + res.status));
+                showMsg(apiMsg, data.message, true);
+                document.getElementById('apiKey').value = '';
+                loadStatus();
+            } catch (err) { showMsg(apiMsg, err.message, false); }
+            finally { testApiBtn.disabled = false; testApiBtn.textContent = 'Test API và lưu'; }
+        });
+
+        async function loadStatus() {
+            try {
+                const res = await fetch('/admin/status');
+                const s = await res.json();
+                document.getElementById('adminKeyWrap').style.display = s.admin_protected ? 'block' : 'none';
+                const b = s.bank;
+                const cells = [
+                    ['AI', s.ai_configured ? '<span class="badge-ok">Đã cấu hình</span>' : '<span class="badge-warn">Chưa cấu hình</span>'],
+                    ['Model', esc(s.ai_model)],
+                    ['Tài liệu', b ? esc(b.filename) : 'Chưa có'],
+                    ['Chế độ', b ? esc(b.mode === 'random' ? 'Đề ngẫu nhiên/lượt' : 'Một đề chung') : '—'],
+                    ['Số câu đã sinh', b ? b.questions + ' / 40' : '0 / 40'],
+                    ['Ký tự tài liệu', b ? b.source_chars : 0],
+                    ['Thời điểm sinh', b && b.generated_at ? esc(b.generated_at) : '—']
+                ];
+                document.getElementById('statusGrid').innerHTML = cells
+                    .map(([k, v]) => `<div class="status-item"><b>${k}</b>${v}</div>`).join('');
+                regenBtn.style.display = (b && b.mode !== 'random') ? 'block' : 'none';
+            } catch (e) {
+                document.getElementById('statusGrid').innerHTML = '<span class="hint">Không tải được trạng thái.</span>';
+            }
+        }
+
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = document.getElementById('fileInput').files[0];
+            if (!file) { showMsg(uploadMsg, 'Bạn chưa chọn file.', false); return; }
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('mode', document.getElementById('modeSelect').value);
+            const k = key();
+            if (k) fd.append('admin_key', k);
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Đang xử lý... AI đang sinh 40 câu (30-60s, đừng đóng trang)';
+            uploadMsg.className = 'admin-msg';
+            try {
+                const res = await fetch('/admin/upload', { method: 'POST', body: fd });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    showMsg(uploadMsg, data.questions > 0
+                        ? `Tạo đề thành công: ${data.questions} câu từ "${data.filename}". Thí sinh vào / là thi được ngay.`
+                        : `Đã lưu tài liệu "${data.filename}" (chế độ đề ngẫu nhiên - mỗi lượt thi AI sẽ sinh đề mới).`, true);
+                    uploadForm.reset();
+                } else {
+                    showMsg(uploadMsg, data.error || ('Lỗi ' + res.status), false);
+                }
+            } catch (err) {
+                showMsg(uploadMsg, 'Lỗi kết nối: ' + err.message, false);
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Tải lên & tạo đề';
+                loadStatus();
+            }
+        });
+
+        regenBtn.addEventListener('click', async () => {
+            const fd = new FormData();
+            const k = key();
+            if (k) fd.append('admin_key', k);
+            regenBtn.disabled = true;
+            regenBtn.textContent = 'Đang sinh đề... (30-60s)';
+            try {
+                const res = await fetch('/admin/generate', { method: 'POST', body: fd });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) showMsg(regenMsg, `Đã sinh lại ${data.questions} câu hỏi.`, true);
+                else showMsg(regenMsg, data.error || ('Lỗi ' + res.status), false);
+            } catch (err) {
+                showMsg(regenMsg, 'Lỗi kết nối: ' + err.message, false);
+            } finally {
+                regenBtn.disabled = false;
+                regenBtn.textContent = 'Sinh lại bộ đề từ tài liệu này';
+                loadStatus();
+            }
+        });
+
+        loadStatus();
+    </script>
+</body>
+</html>
