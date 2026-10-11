@@ -2,8 +2,8 @@
 
 Bao gồm:
   1. Unit: retry khi AI trả rác, lỗi khi AI trả thiếu, lọc câu sai, normalize answer.
-  2. Admin: upload hợp lệ/sai định dạng/sai mode, generate lại.
-  3. Phòng thi ẩn danh còn hoạt động: /start -> /submit -> /get-questions.
+  2. Admin: tạo bộ đề mới (nhiều môn), kiểm tra kho bộ đề /quizzes.
+  3. Phòng thi ẩn danh: chọn bộ đề -> /start -> /submit.
 """
 import json
 import os
@@ -91,7 +91,7 @@ for name in ("fixture.docx", "fixture.pdf", "fixture.txt"):
 else:
     check("unit: có fixture để test trích xuất", False, "thiếu /tmp/fixture.*")
 
-# ---------- 2. admin upload ----------
+# ---------- 2. admin: tạo bộ đề mới (nhiều môn) ----------
 r = requests.get(B + "/admin/status")
 check("admin/status 200 + báo cấu hình AI", r.status_code == 200 and "ai_configured" in r.text)
 r = requests.post(B + "/admin/upload", files={"file": ("x.exe", b"MZ")}, data={"mode": "shared"})
@@ -106,25 +106,41 @@ check("sai mode -> 400", r.status_code == 400, r.text[:120])
 with open("/tmp/fixture.txt", encoding="utf-8") as f:
     content = f.read()
 r = requests.post(B + "/admin/upload",
-                  files={"file": ("fixture.txt", content)}, data={"mode": "shared"}, timeout=120)
-check("upload .txt hợp lệ -> 400 (cần AI cấu hình ở server test)",
+                  files={"file": ("fixture.txt", content)},
+                  data={"mode": "shared", "title": "Bộ đề Regression", "subject": "Tiếng Anh"},
+                  timeout=120)
+check("upload .txt hợp lệ -> tạo bộ đề mới",
       r.status_code in (200, 502), f"{r.status_code} {r.text[:200]}")
+QUIZ_ID = None
 if r.status_code == 200:
-    check("bank có 40 câu", r.json().get("questions") == 40, r.text[:150])
+    QUIZ_ID = r.json().get("quiz_id")
+    check("bộ đề mới có 40 câu + lưu đúng môn",
+          r.json().get("questions") == 40 and r.json().get("subject") == "Tiếng Anh",
+          r.text[:150])
 
-# ---------- 3. phòng thi ẩn danh ----------
-if os.path.exists(main.BANK_FILE):
-    r = requests.get(B + "/get-questions")
-    check("/get-questions 40 câu, không lộ đáp án",
+r = requests.get(B + "/quizzes")
+quizzes = r.json().get("quizzes", []) if r.status_code == 200 else []
+check("kho bộ đề liệt kê bộ đề vừa tạo (nhiều bộ, không lộ đáp án)",
+      r.status_code == 200 and QUIZ_ID and any(q["id"] == QUIZ_ID for q in quizzes)
+      and all("correctText" not in q for q in quizzes), r.text[:200])
+
+# ---------- 3. phòng thi ẩn danh: chọn bộ đề ----------
+if QUIZ_ID:
+    r = requests.get(B + f"/quizzes/{QUIZ_ID}/questions")
+    check("/quizzes/{id}/questions 40 câu, không lộ đáp án",
           r.status_code == 200 and len(r.json()) == 40
-          and all("correctText" not in q for q in r.json()), str(r.status_code))
+          and all("correctText" not in q for q in r.json()), str(r.status_code) + r.text[:120])
     r = requests.post(B + "/start", json={"name": "Regression Anon"}, timeout=60)
+    check("/start thiếu quiz_id -> 400", r.status_code == 400, r.text[:120])
+    r = requests.post(B + "/start", json={"name": "Regression Anon", "quiz_id": "khong-ton-tai"}, timeout=60)
+    check("/start quiz_id sai -> 404", r.status_code == 404, r.text[:120])
+    r = requests.post(B + "/start", json={"name": "Regression Anon", "quiz_id": QUIZ_ID}, timeout=60)
     d = r.json()
     sid = d.get("session_id")
     check("/start ẩn danh -> 40 câu + session",
           r.status_code == 200 and len(d.get("questions", [])) == 40 and sid, r.text[:200])
     if sid:
-        sessions = json.load(open("sessions.json", encoding="utf-8"))
+        sessions = {sid: main.get_session(sid)}
         expected = sum(1 for q in sessions[sid]["shuffled_questions"]
                        if q.get("correctText") == q.get("options", [None])[0])
         answers = [q.get("options", [""])[0] for q in sessions[sid]["shuffled_questions"]]
@@ -135,7 +151,7 @@ if os.path.exists(main.BANK_FILE):
         r = requests.post(B + "/submit", json={"session_id": sid, "answers": ["a"]})
         check("session đã xóa -> 400", r.status_code == 400, r.text[:120])
 else:
-    check("có bank để test phòng thi ẩn danh", False, "thiếu exam_bank.json")
+    check("có bộ đề để test phòng thi ẩn danh", False, "upload không tạo được bộ đề")
 
 # ---------- trang ----------
 for path, needle in (("/", "VÀO PHÒNG THI"), ("/admin", "Tạo đề thi"), ("/portal", "Đăng nhập")):

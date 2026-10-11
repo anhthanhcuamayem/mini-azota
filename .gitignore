@@ -1,9 +1,5 @@
 .env
 ai_config.json
-history.json
-sessions.json
-exam_bank.json
-data/*.json
 tests/.*.log
 __pycache__/
 *.pyc

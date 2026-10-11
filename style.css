@@ -1974,6 +1974,217 @@ input[type="text"]:focus {
     }
 }
 
+/* UX polish: clearer focus, status feedback and compact touch targets */
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[role="radio"]:focus-visible {
+    outline: 3px solid var(--primary-glow);
+    outline-offset: 3px;
+}
+
+.quiz-select {
+    width: 100%;
+    min-height: 52px;
+    padding: 14px 44px 14px 52px;
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    background: var(--bg-card-sub);
+    color: var(--text-main);
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.quiz-select:hover {
+    border-color: var(--primary-light);
+    background: var(--bg-card);
+}
+
+.input-hint,
+.start-exam-hint {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--text-muted);
+    font-size: .78rem;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.input-hint {
+    margin-top: 8px;
+}
+
+.input-hint i {
+    color: var(--primary);
+}
+
+.start-exam-hint {
+    justify-content: center;
+    margin: 10px 0 0;
+}
+
+.start-exam-hint i {
+    color: var(--success);
+}
+
+.btn-primary-fire:disabled,
+.btn-submit-exam:disabled {
+    opacity: .72;
+    cursor: wait;
+    transform: none;
+    box-shadow: none;
+}
+
+.exam-progress-track {
+    width: min(260px, 100%);
+    height: 5px;
+    margin-top: 8px;
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    background: rgba(255, 255, 255, .14);
+}
+
+.exam-progress-fill {
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #34d399, #a7f3d0);
+    transition: width .25s ease;
+}
+
+.option-item:focus-visible {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px var(--primary-glow);
+    outline: none;
+}
+
+.q-num-btn {
+    width: 100%;
+    appearance: none;
+    font-family: var(--font-main);
+}
+
+.btn-strike-option:focus-visible {
+    opacity: 1;
+    outline: 2px solid var(--danger);
+    outline-offset: 2px;
+}
+
+@media (hover: none) {
+    .btn-strike-option {
+        opacity: .8;
+    }
+}
+
+@media (max-width: 640px) {
+    .login-hero {
+        margin-top: 12px;
+        padding-top: 34px;
+    }
+
+    .hero-badge {
+        max-width: 100%;
+        font-size: .68rem;
+        padding: 6px 11px;
+    }
+
+    .exam-header {
+        align-items: flex-start;
+    }
+
+    .exam-title-block {
+        width: 100%;
+    }
+
+    .exam-header h2 {
+        font-size: 1rem;
+    }
+
+    .exam-progress-track {
+        width: 100%;
+    }
+
+    .header-user-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .btn-header-tool {
+        width: 40px;
+        height: 38px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    .btn-header-tool span {
+        display: none;
+    }
+
+    .submit-bottom {
+        position: sticky;
+        bottom: 10px;
+        z-index: 5;
+        padding: 10px;
+        margin: 12px -10px -10px;
+        background: color-mix(in srgb, var(--bg-sidebar) 88%, transparent);
+        backdrop-filter: blur(10px);
+        border-radius: var(--radius-md);
+    }
+
+    .nav-buttons-bar {
+        gap: 8px;
+    }
+
+    .nav-group-left,
+    .nav-group-right {
+        flex: 1;
+    }
+
+    .nav-group-right .btn-nav,
+    .nav-group-left .btn-nav {
+        flex: 1;
+        justify-content: center;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .btn-nav.text-only {
+        font-size: 0;
+        flex: 0 0 44px;
+        padding: 12px;
+    }
+
+    .btn-nav.text-only i {
+        font-size: .95rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+    }
+
+    #particleCanvas {
+        display: none;
+    }
+}
+
 /* Print Styles for Certificate */
 @media print {
     body * {
@@ -1998,5 +2209,202 @@ input[type="text"]:focus {
     }
     .no-print {
         display: none !important;
+    }
+}
+
+/* ==========================================================================
+   DRAWER "CỔNG LỚP HỌC" - MỞ NGAY TRONG TRANG, KHÔNG CHUYỂN TRANG
+   ========================================================================== */
+body.no-scroll {
+    overflow: hidden;
+}
+
+.portal-open-btn {
+    width: auto;
+    padding: 0 14px;
+    gap: 8px;
+    text-decoration: none;
+    font-weight: 800;
+}
+
+.portal-open-btn i {
+    color: var(--primary);
+}
+
+.portal-open-btn:hover i {
+    color: var(--primary-light);
+}
+
+.portal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s ease;
+    z-index: 1180;
+}
+
+.portal-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.portal-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100dvh;
+    max-height: 100vh;
+    width: min(620px, 100%);
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card);
+    border-left: 1px solid var(--border-color);
+    box-shadow: -18px 0 48px rgba(15, 23, 42, 0.28);
+    transform: translateX(101%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    z-index: 1181;
+}
+
+.portal-drawer.open {
+    transform: translateX(0);
+}
+
+.portal-drawer-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-card-sub);
+}
+
+.portal-drawer-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 900;
+    font-size: 0.98rem;
+    color: var(--text-main);
+    min-width: 0;
+    flex: 1;
+}
+
+.portal-drawer-title i {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border-radius: 11px;
+    background: var(--grad-primary);
+    color: #fff;
+    font-size: 0.95rem;
+}
+
+.portal-drawer-title span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.portal-drawer-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.portal-drawer-tool {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 38px;
+    padding: 0 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.portal-drawer-tool:hover {
+    color: var(--primary);
+    border-color: var(--primary-light);
+}
+
+.portal-drawer-close:hover {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+.portal-drawer-body {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    background: var(--bg-card);
+}
+
+.portal-drawer-body iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+    background: var(--bg-card);
+}
+
+.portal-drawer-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--text-muted);
+    font-weight: 700;
+    font-size: 0.9rem;
+    background: var(--bg-card);
+}
+
+.portal-drawer-loading.hidden {
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .portal-drawer {
+        width: 100%;
+        border-left: 0;
+    }
+
+    .portal-open-label {
+        display: none;
+    }
+
+    .portal-open-btn {
+        padding: 0 11px;
+    }
+
+    .portal-drawer-head {
+        padding: 10px 12px;
+    }
+
+    .portal-drawer-title {
+        font-size: 0.9rem;
+    }
+
+    .portal-drawer-tool .tool-label {
+        display: none;
+    }
+
+    .portal-drawer-tool {
+        padding: 0 10px;
     }
 }

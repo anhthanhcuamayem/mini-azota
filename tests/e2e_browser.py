@@ -12,6 +12,8 @@ import urllib.request
 import requests
 import websockets
 
+sys.path.insert(0, os.getcwd())
+
 BASE = "http://127.0.0.1:8011"
 DEBUG = "http://127.0.0.1:9222"
 FIXTURE = "/tmp/fixture.txt"
@@ -45,14 +47,13 @@ def setup():
 
     # dọn bài nộp cũ của tài khoản test để lần chạy sau HS làm lại được
     hs_id = student.get(BASE + "/api/auth/me").json()["user"]["id"]
-    if os.path.exists("data/attempts.json"):
-        with open("data/attempts.json", encoding="utf-8") as f:
-            attempts = json.load(f)
-        kept = [a for a in attempts if a.get("user_id") != hs_id]
-        if len(kept) != len(attempts):
-            with open("data/attempts.json", "w", encoding="utf-8") as f:
-                json.dump(kept, f, ensure_ascii=False, indent=2)
-            print(f"đã dọn {len(attempts) - len(kept)} bài nộp cũ của HS E2E")
+    try:
+        import supabase_store as db
+        removed = db.delete("attempts", [("user_id", hs_id)])
+        if removed:
+            print(f"đã dọn {len(removed)} bài nộp cũ của HS E2E")
+    except Exception as e:  # pragma: no cover - chỉ là dọn dẹp tiện ích
+        print(f"bỏ qua dọn bài nộp cũ: {e}")
 
     r = teacher.post(BASE + "/api/classes", json={"name": "12B2 E2E", "grade": "12"})
     cls = r.json()["class"]
@@ -96,7 +97,7 @@ def setup():
         exam = r.json()["exam"]
     teacher.post(BASE + f"/api/exams/{exam['id']}/assign", json={"class_ids": [cls["id"]]})
     teacher.post(BASE + f"/api/exams/{exam['id']}/publish", json={"published": True})
-    return {"class_id": cls["id"], "exam_id": exam["id"]}
+    return {"class_id": cls["id"], "exam_id": exam["id"], "student_id": hs_id}
 
 
 # ------------------------------------------------------------------ browser
@@ -141,6 +142,7 @@ async def browser_flow(ctx):
                     expected = status == 401 and url.endswith("/api/auth/me")
                     if status >= 400 and not expected:
                         bad.append(f"{status} {url}")
+                        print(f"   [debug] response lỗi: {status} {url}", flush=True)
                 if msg.get("id") == my_id:
                     return msg.get("result", {})
 
@@ -249,6 +251,137 @@ async def browser_flow(ctx):
         await asyncio.sleep(2)
         text = await ev("document.body.innerText")
         check("thêm tổ qua UI thành công", "Tổ B" in text, text[:200])
+
+        # ---------- 7. Trang chủ: cổng lớp học mở NGAY TRONG TRANG (không chuyển trang) ----------
+        await goto(BASE + "/")
+        await asyncio.sleep(1.5)
+        check("trang chủ có nút mở cổng lớp học",
+              await ev("!!document.getElementById('portalToggleBtn')") is True)
+        # đánh dấu lên window: nếu trang bị điều hướng thì dấu này biến mất
+        await ev("window.__noNav = 'still-here'")
+        await ev("document.getElementById('portalToggleBtn').click()")
+        ok = await wait_for("!!document.querySelector('.portal-drawer.open')", tries=20)
+        check("bấm nút -> drawer trượt ra", ok)
+        check("KHÔNG chuyển trang (URL vẫn là trang chủ)",
+              await ev("location.pathname") == "/", str(await ev("location.pathname")))
+        check("KHÔNG tải lại trang (dấu window còn nguyên)",
+              await ev("window.__noNav") == "still-here")
+        check("query thêm ?panel=account để F5 vẫn giữ drawer",
+              "panel=account" in str(await ev("location.search")), str(await ev("location.search")))
+        ok = await wait_for("!!document.getElementById('portalFrame').contentDocument", tries=40)
+        check("iframe đã nạp /portal", ok)
+        ok = await wait_for(
+            "!!document.getElementById('portalFrame').contentDocument.getElementById('appView')"
+            " && !document.getElementById('portalFrame').contentDocument.getElementById('appView')"
+            ".classList.contains('hidden')", tries=40)
+        check("portal trong drawer thấy phiên đăng nhập sẵn có", ok)
+        check("portal trong drawer nhận theme sáng/tối từ trang chủ",
+              await ev("document.getElementById('portalFrame').contentDocument"
+                       ".documentElement.getAttribute('data-theme')") == "light")
+
+        # đóng bằng phím Esc -> không chuyển trang, quay về đúng URL cũ
+        await send("Input.dispatchKeyEvent", {"type": "keyDown", "key": "Escape",
+                                              "code": "Escape", "windowsVirtualKeyCode": 27})
+        ok = await wait_for("!document.querySelector('.portal-drawer.open')", tries=20)
+        check("Esc đóng drawer", ok)
+        ok = await wait_for("location.search.indexOf('panel=') === -1", tries=20)
+        check("đóng drawer -> URL sạch lại (nút Back không bị kẹt)", ok,
+              str(await ev("location.search")))
+
+        # backdrop + nút đóng cũng hoạt động
+        await ev("document.getElementById('portalToggleBtn').click()")
+        await wait_for("!!document.querySelector('.portal-drawer.open')", tries=20)
+        await ev("document.getElementById('portalCloseBtn').click()")
+        ok = await wait_for("!document.querySelector('.portal-drawer.open')", tries=20)
+        check("nút X đóng drawer", ok)
+        await ev("document.getElementById('portalToggleBtn').click()")
+        await wait_for("!!document.querySelector('.portal-drawer.open')", tries=20)
+        await ev("document.getElementById('portalBackdrop').click()")
+        ok = await wait_for("!document.querySelector('.portal-drawer.open')", tries=20)
+        check("bấm nền mờ đóng drawer", ok)
+
+        # ---------- 8. Điện thoại 390px: không tràn ngang, drawer phủ đủ bề ngang ----------
+        await ev("document.getElementById('portalToggleBtn').click()")
+        await wait_for("!!document.querySelector('.portal-drawer.open')", tries=20)
+        await send("Emulation.setDeviceMetricsOverride",
+                   {"width": 390, "height": 844, "deviceScaleFactor": 2, "mobile": True})
+        await asyncio.sleep(1.0)
+        scroll_w = await ev("document.documentElement.scrollWidth")
+        inner_w = await ev("window.innerWidth")
+        check("trang chủ không tràn ngang ở 390px",
+              isinstance(scroll_w, int) and isinstance(inner_w, int) and scroll_w <= inner_w + 1,
+              f"scrollW={scroll_w} innerW={inner_w}")
+        w = await ev("Math.round(document.getElementById('portalDrawer').getBoundingClientRect().width)")
+        iw = await ev("window.innerWidth")
+        check("drawer chiếm trọn bề ngang trên điện thoại",
+              isinstance(w, int) and isinstance(iw, int) and abs(w - iw) <= 1, f"drawer={w} viewport={iw}")
+        frame_scroll_w = await ev("document.getElementById('portalFrame').contentDocument"
+                                 ".documentElement.scrollWidth")
+        check("portal bên trong không tràn ngang ở 390px",
+              isinstance(frame_scroll_w, int) and frame_scroll_w <= 392,
+              f"portalScrollW={frame_scroll_w}")
+        # portal mở riêng (không nhúng trong drawer) cũng không được tràn ngang trên điện thoại
+        await send("Page.navigate", {"url": BASE + "/portal"})
+        await asyncio.sleep(2.5)
+        stand_w = await ev("document.documentElement.scrollWidth")
+        stand_in = await ev("window.innerWidth")
+        check("portal đứng riêng không tràn ngang ở 390px",
+              isinstance(stand_w, int) and isinstance(stand_in, int) and stand_w <= stand_in + 1,
+              f"portalScrollW={stand_w} innerW={stand_in}")
+        await send("Emulation.clearDeviceMetricsOverride")
+
+        # ---------- 9. HS đăng nhập TRONG drawer -> vào phòng thi ngay tại trang ----------
+        # dọn bài nộp của HS E2E để nút "Vào phòng thi" hiện lại
+        try:
+            import supabase_store as db
+            db.delete("attempts", [("user_id", ctx["student_id"])])
+        except Exception as e:  # pragma: no cover - dọn dẹp tiện ích
+            print("bỏ qua dọn bài nộp HS:", e)
+        frame = "document.getElementById('portalFrame').contentWindow"
+        await goto(BASE + "/")
+        await asyncio.sleep(1.5)
+        await ev("window.__noNav = 'still-here'")
+        await ev("document.getElementById('portalToggleBtn').click()")
+        await wait_for("!!document.querySelector('.portal-drawer.open')", tries=20)
+        ok = await wait_for(f"!!{frame}.document.getElementById('logoutBtn')", tries=60)
+        check("drawer thấy phiên giáo viên để đăng xuất", ok)
+        # chờ portal trong drawer tải xong dữ liệu, tránh việc đăng xuất đúng lúc request
+        # danh sách lớp đang bay -> response 401 (đúng nhưng làm nhiễu kiểm tra request lỗi)
+        ok = await wait_for(
+            f"!!{frame}.document.getElementById('panel') && "
+            f"{frame}.document.getElementById('panel').innerText.indexOf('Đang tải') === -1", tries=60)
+        check("portal trong drawer tải xong danh sách lớp", ok)
+        await ev(f"{frame}.document.getElementById('logoutBtn').click()")
+        # chờ đúng trạng thái sau đăng xuất (form hiện lại), không chỉ là element tồn tại,
+        # vì #loginEmail vẫn nằm trong DOM khi đang đăng nhập -> dễ set value vào document sắp bị reload
+        ok = await wait_for(
+            f"!{frame}.document.getElementById('authView').classList.contains('hidden')", tries=60)
+        check("đăng xuất trong drawer -> hiện lại form đăng nhập", ok)
+        await asyncio.sleep(1.0)  # đợi iframe reload xong hẳn mới nhập
+        await ev(f"{frame}.document.getElementById('loginEmail').value='e2e_hs@t.edu'")
+        await ev(f"{frame}.document.getElementById('loginPass').value='matkhau123'")
+        await ev(f"{frame}.document.getElementById('loginForm').requestSubmit()")
+        ok = await wait_for(
+            f"!{frame}.document.getElementById('appView').classList.contains('hidden') && "
+            f"{frame}.document.getElementById('userPill').innerText.indexOf('HS E2E') > -1", tries=60)
+        check("HS đăng nhập được ngay trong drawer", ok)
+        check("đăng nhập trong drawer KHÔNG chuyển trang",
+              await ev("location.pathname") == "/" and await ev("window.__noNav") == "still-here")
+        await ev(f"[...{frame}.document.querySelectorAll('#mainTabs .tab')]"
+                 f".find(b=>b.dataset.tab==='exams').click()")
+        ok = await wait_for(f"!!{frame}.document.querySelector('[data-start]')", tries=60)
+        if not ok:  # in nội dung drawer để biết đang kẹt ở đâu
+            print("   [debug] nội dung drawer:",
+                  str(await ev(f"{frame}.document.body.innerText"))[:300].replace("\n", " | "))
+        check("drawer hiện nút Vào phòng thi của đề được giao", ok)
+        await ev(f"{frame}.document.querySelector('[data-start]').click()")
+        ok = await wait_for("document.getElementById('examContainer').style.display === 'block'", tries=60)
+        check("vào phòng thi từ drawer NGAY TẠI TRANG (không chuyển trang)", ok)
+        check("vẫn không tải lại trang", await ev("window.__noNav") == "still-here")
+        check("URL ghi nhận đề đang thi", "exam=" in str(await ev("location.search")),
+              str(await ev("location.search")))
+        check("drawer tự đóng khi vào phòng thi",
+              await ev("!document.querySelector('.portal-drawer.open')") is True)
 
         check("không có JS exception", not errors, errors)
         check("không có request lỗi >=400 (trừ 401 kiểm tra phiên /api/auth/me)", not bad, bad)

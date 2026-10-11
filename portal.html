@@ -1,68 +1,163 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
 <title>Portal - Quản lý lớp học & đề thi</title>
 <link rel="stylesheet" href="/style.css">
 <style>
-    :root { --p-bg: #f1f5f9; --p-card: #ffffff; --p-line: #e2e8f0; --p-mut: #64748b; --p-ink: #0f172a; --p-acc: #4f46e5; }
+    :root {
+        --p-bg: #f1f5f9; --p-card: #ffffff; --p-soft: #f8fafc; --p-line: #e2e8f0;
+        --p-mut: #64748b; --p-ink: #0f172a; --p-acc: #4f46e5; --p-acc2: #7c3aed;
+        --p-grad: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        --p-shadow: 0 6px 22px rgba(15, 23, 42, .07);
+        --p-ring: rgba(99, 102, 241, .35);
+    }
+    html[data-theme="dark"] {
+        --p-bg: #0b1120; --p-card: #111827; --p-soft: #172033; --p-line: #1f2937;
+        --p-mut: #94a3b8; --p-ink: #e5e7eb; --p-acc: #6366f1; --p-acc2: #8b5cf6;
+        --p-grad: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 100%);
+        --p-shadow: 0 8px 26px rgba(0, 0, 0, .45);
+        --p-ring: rgba(129, 140, 248, .45);
+    }
     * { box-sizing: border-box; }
-    body { margin: 0; background: var(--p-bg); color: var(--p-ink);
-           font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; }
-    .wrap { max-width: 1080px; margin: 0 auto; padding: 18px 16px 60px; }
+    html, body { background: var(--p-bg); }
+    /* style.css (trang thi) đặt body thành flex-column + padding.
+       Portal tự lo layout của mình, nếu để nguyên body flex thì .wrap bị kéo theo
+       min-content và tràn ngang trên điện thoại. */
+    body { margin: 0; padding: 0; display: block; min-height: 0; overflow-x: hidden;
+           color: var(--p-ink); -webkit-text-size-adjust: 100%;
+           font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+    .wrap { width: 100%; max-width: 1080px; margin: 0 auto; padding: 18px 16px 60px; }
     header.p-top { display: flex; align-items: center; justify-content: space-between; gap: 12px;
-                   padding: 14px 0 18px; }
+                   padding: 14px 0 18px; flex-wrap: wrap; }
     .brand { font-weight: 900; font-size: 1.15rem; display: flex; align-items: center; gap: 8px; }
     .brand small { display: block; font-weight: 500; font-size: .74rem; color: var(--p-mut); }
-    .who { display: flex; align-items: center; gap: 10px; font-size: .88rem; }
-    .who .pill { background: var(--p-card); border: 1px solid var(--p-line); padding: 6px 12px;
-                 border-radius: 999px; font-weight: 700; }
-    .role-badge { font-size: .72rem; font-weight: 800; padding: 3px 8px; border-radius: 999px; color: #fff; }
-    .role-teacher { background: #4f46e5; } .role-student { background: #0ea5e9; }
-    .role-class_monitor { background: #f59e0b; } .role-team_leader { background: #10b981; }
-    .btn { border: 0; border-radius: 10px; padding: 9px 14px; font-weight: 700; font-size: .87rem;
-           cursor: pointer; background: var(--p-acc); color: #fff; }
-    .btn.sec { background: #e2e8f0; color: #0f172a; }
-    .btn.danger { background: #fee2e2; color: #b91c1c; }
-    .btn.ok { background: #d1fae5; color: #047857; }
-    .btn.sm { padding: 6px 10px; font-size: .78rem; }
+    .who { display: flex; align-items: center; gap: 10px; font-size: .88rem; flex-wrap: wrap; }
+    .who .pill { background: var(--p-card); border: 1px solid var(--p-line); padding: 7px 13px;
+                 border-radius: 999px; font-weight: 700; box-shadow: var(--p-shadow);
+                 max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .role-badge { font-size: .72rem; font-weight: 800; padding: 3px 9px; border-radius: 999px;
+                  color: #fff; white-space: nowrap; }
+    .role-teacher { background: linear-gradient(135deg, #4f46e5, #6366f1); }
+    .role-student { background: linear-gradient(135deg, #0ea5e9, #38bdf8); }
+    .role-class_monitor { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+    .role-team_leader { background: linear-gradient(135deg, #10b981, #34d399); }
+    .role-vice_class_monitor { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
+    .role-custom { background: linear-gradient(135deg, #64748b, #94a3b8); }
+
+    .btn { border: 0; border-radius: 11px; padding: 10px 15px; font-weight: 800; font-size: .87rem;
+           cursor: pointer; background: var(--p-grad); color: #fff; font-family: inherit;
+           transition: transform .16s ease, box-shadow .16s ease, opacity .16s ease; }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 16px var(--p-ring); }
+    .btn:active:not(:disabled) { transform: translateY(0); }
+    .btn.sec { background: var(--p-soft); color: var(--p-ink); border: 1px solid var(--p-line); }
+    .btn.danger { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    .btn.ok { background: #d1fae5; color: #047857; border: 1px solid #a7f3d0; }
+    html[data-theme="dark"] .btn.danger { background: rgba(239, 68, 68, .16); color: #fca5a5; border-color: rgba(239, 68, 68, .35); }
+    html[data-theme="dark"] .btn.ok { background: rgba(16, 185, 129, .16); color: #6ee7b7; border-color: rgba(16, 185, 129, .35); }
+    .btn.sm { padding: 7px 11px; font-size: .78rem; border-radius: 9px; }
     .btn:disabled { opacity: .55; cursor: not-allowed; }
-    .card { background: var(--p-card); border: 1px solid var(--p-line); border-radius: 16px;
-            padding: 18px; margin-bottom: 16px; }
-    .card h3 { margin: 0 0 4px; font-size: 1rem; }
+    .btn:focus-visible, .tab:focus-visible, input:focus-visible, select:focus-visible {
+        outline: 3px solid var(--p-ring); outline-offset: 1px; }
+
+    .card { background: var(--p-card); border: 1px solid var(--p-line); border-radius: 18px;
+            padding: 18px; margin-bottom: 14px; box-shadow: var(--p-shadow); }
+    .card h3 { margin: 0 0 4px; font-size: 1.02rem; display: flex; align-items: center; gap: 8px;
+               flex-wrap: wrap; }
     .card .sub { color: var(--p-mut); font-size: .82rem; margin: 0 0 12px; }
     .grid { display: grid; gap: 12px; }
-    .grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
     label.fl { display: block; font-size: .78rem; font-weight: 800; color: var(--p-mut);
                text-transform: uppercase; letter-spacing: .4px; margin: 10px 0 5px; }
-    input, select { width: 100%; padding: 10px 12px; border: 1px solid var(--p-line); border-radius: 10px;
-                    font-size: .92rem; background: #fff; color: inherit; }
-    .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-    .tab { padding: 9px 16px; border-radius: 999px; background: #e2e8f0; font-weight: 700;
-           font-size: .86rem; cursor: pointer; border: 0; }
-    .tab.active { background: var(--p-acc); color: #fff; }
+    input, select { width: 100%; padding: 11px 12px; border: 1px solid var(--p-line); border-radius: 11px;
+                    font-size: .92rem; background: var(--p-card); color: var(--p-ink);
+                    font-family: inherit; transition: border-color .16s ease, box-shadow .16s ease; }
+    input:hover, select:hover { border-color: var(--p-acc); }
+
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; padding: 5px; border-radius: 999px;
+            background: var(--p-soft); border: 1px solid var(--p-line);
+            overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab { padding: 9px 16px; border-radius: 999px; background: transparent; color: var(--p-mut);
+           font-weight: 800; font-size: .86rem; cursor: pointer; border: 0; white-space: nowrap;
+           font-family: inherit; transition: background .18s ease, color .18s ease; }
+    .tab:hover { color: var(--p-ink); }
+    .tab.active { background: var(--p-grad); color: #fff; box-shadow: 0 4px 12px var(--p-ring); }
+
+    .tbl-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table.pt { width: 100%; border-collapse: collapse; font-size: .86rem; }
-    table.pt th, table.pt td { padding: 9px 8px; border-bottom: 1px solid var(--p-line); text-align: left; }
-    table.pt th { color: var(--p-mut); font-size: .74rem; text-transform: uppercase; letter-spacing: .4px; }
-    .code { font-family: 'JetBrains Mono', monospace; font-weight: 800; background: #eef2ff;
-            padding: 3px 9px; border-radius: 7px; letter-spacing: 2px; }
-    .tag { font-size: .72rem; font-weight: 800; padding: 3px 8px; border-radius: 999px;
-           background: #e2e8f0; color: #475569; }
-    .tag.pub { background: #d1fae5; color: #047857; }
-    .tag.draft { background: #fef3c7; color: #b45309; }
+    table.pt th, table.pt td { padding: 10px 9px; border-bottom: 1px solid var(--p-line);
+                               text-align: left; vertical-align: middle; }
+    table.pt th { color: var(--p-mut); font-size: .73rem; text-transform: uppercase;
+                  letter-spacing: .4px; background: var(--p-soft); white-space: nowrap; }
+    table.pt tbody tr:hover { background: var(--p-soft); }
+    table.pt td select { min-width: 130px; }
+
+    .code { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-weight: 800;
+            background: var(--p-soft); border: 1px solid var(--p-line);
+            padding: 4px 10px; border-radius: 8px; letter-spacing: 2px; white-space: nowrap; }
+    .tag { display: inline-flex; align-items: center; gap: 5px; font-size: .72rem; font-weight: 800;
+           padding: 4px 9px; border-radius: 999px; background: var(--p-soft);
+           color: var(--p-mut); border: 1px solid var(--p-line); }
+    .tag.pub { background: rgba(16, 185, 129, .14); color: #047857; border-color: rgba(16, 185, 129, .3); }
+    .tag.draft { background: rgba(245, 158, 11, .16); color: #b45309; border-color: rgba(245, 158, 11, .32); }
+    html[data-theme="dark"] .tag.pub { color: #6ee7b7; }
+    html[data-theme="dark"] .tag.draft { color: #fcd34d; }
     .muted { color: var(--p-mut); font-size: .82rem; }
     .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .empty { text-align: center; color: var(--p-mut); padding: 26px 10px; font-size: .9rem; }
-    #toast { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 50; }
-    .toast { background: #0f172a; color: #fff; padding: 11px 15px; border-radius: 11px; font-size: .86rem;
-             box-shadow: 0 8px 24px rgba(0,0,0,.25); max-width: 340px; animation: pop .18s ease; }
+    .empty { text-align: center; color: var(--p-mut); padding: 26px 14px; font-size: .9rem;
+             border: 1px dashed var(--p-line); border-radius: 14px; background: var(--p-soft); }
+
+    #toast { position: fixed; right: 16px; bottom: 16px; left: auto; display: flex;
+             flex-direction: column; gap: 8px; z-index: 50; max-width: calc(100vw - 32px); }
+    .toast { background: #0f172a; color: #fff; padding: 12px 16px; border-radius: 12px;
+             font-size: .86rem; font-weight: 600; box-shadow: 0 10px 28px rgba(0, 0, 0, .3);
+             animation: pop .2s ease; }
     .toast.err { background: #b91c1c; }
-    @keyframes pop { from { transform: translateY(8px); opacity: 0; } }
-    .auth-box { max-width: 460px; margin: 40px auto; }
+    @keyframes pop { from { transform: translateY(10px); opacity: 0; } }
+
+    .auth-box { max-width: 470px; margin: 34px auto; }
+    .auth-box .card-head { text-align: center; margin-bottom: 6px; }
+    .auth-box .card-head .emoji { font-size: 1.9rem; display: block; margin-bottom: 6px; }
     .hidden { display: none !important; }
     .member-sel { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
     .member-sel select { width: auto; padding: 6px 8px; font-size: .8rem; }
+
+    /* Nhúng trong drawer của trang chủ: gọn lại để không lặp lại tiêu đề */
+    body.embedded { background: var(--p-card); }
+    body.embedded .wrap { max-width: none; padding: 10px 14px 30px; }
+    body.embedded header.p-top { padding: 6px 0 12px; }
+    body.embedded .brand small { display: none; }
+    body.embedded .auth-box { margin: 14px auto; }
+
+    /* =====================  RESPONSIVE (ĐIỆN THOẠI / MÁY TÍNH BẢNG)  ===================== */
+    @media (max-width: 760px) {
+        .wrap { padding: 14px 12px 44px; }
+        .card { padding: 15px; border-radius: 16px; }
+        .card h3 { font-size: .98rem; }
+        .grid.cols-2 { grid-template-columns: 1fr; }
+        .row > input, .row > select { max-width: 100% !important; flex: 1 1 160px; }
+        .row > .btn { flex: 0 1 auto; }
+        table.pt { font-size: .82rem; }
+        table.pt th, table.pt td { padding: 8px 7px; }
+        .auth-box { margin: 18px auto; }
+        #toast { left: 12px; right: 12px; bottom: 12px; }
+        .toast { max-width: none; }
+        .who .pill { font-size: .8rem; padding: 6px 11px; }
+        .brand { font-size: 1.05rem; }
+        .p-top .btn { padding: 8px 12px; font-size: .82rem; }
+    }
+    @media (max-width: 430px) {
+        .wrap { padding: 12px 10px 40px; }
+        .card { padding: 13px; }
+        .brand { font-size: 1rem; }
+        .tab { padding: 8px 13px; font-size: .82rem; }
+        .btn { padding: 9px 12px; font-size: .83rem; }
+        .who { gap: 7px; }
+        .who .pill { font-size: .76rem; max-width: 58vw; }
+    }
 </style>
 </head>
 <body>
@@ -77,9 +172,14 @@
 
     <!-- ================= ĐĂNG NHẬP / ĐĂNG KÝ ================= -->
     <div class="card auth-box" id="authView">
-        <div class="tabs">
-            <button class="tab active" id="tabLogin">Đăng nhập</button>
-            <button class="tab" id="tabReg">Đăng ký</button>
+        <div class="card-head">
+            <span class="emoji">🎓</span>
+            <h3 style="justify-content:center">Tài khoản học sinh &amp; giáo viên</h3>
+            <p class="sub">Đăng nhập để vào lớp của bạn, làm bài thi được giao và xem bảng điểm.</p>
+        </div>
+        <div class="tabs" role="tablist" aria-label="Tài khoản">
+            <button class="tab active" id="tabLogin" type="button" role="tab" aria-selected="true" aria-controls="loginForm">Đăng nhập</button>
+            <button class="tab" id="tabReg" type="button" role="tab" aria-selected="false" aria-controls="regForm">Đăng ký</button>
         </div>
 
         <form id="loginForm">
@@ -87,7 +187,7 @@
             <input id="loginEmail" type="email" autocomplete="email" placeholder="gv@truong.edu" required>
             <label class="fl" for="loginPass">Mật khẩu</label>
             <input id="loginPass" type="password" autocomplete="current-password" placeholder="••••••" required>
-            <button class="btn" style="width:100%;margin-top:16px" type="submit">Đăng nhập</button>
+            <button class="btn" style="width:100%;margin-top:16px" type="submit" id="loginSubmitBtn">Đăng nhập</button>
         </form>
 
         <form id="regForm" class="hidden">
@@ -102,7 +202,7 @@
             </select>
             <label class="fl" for="regPass">Mật khẩu (tối thiểu 6 ký tự)</label>
             <input id="regPass" type="password" minlength="6" required>
-            <button class="btn" style="width:100%;margin-top:16px" type="submit">Tạo tài khoản</button>
+            <button class="btn" style="width:100%;margin-top:16px" type="submit" id="regSubmitBtn">Tạo tài khoản</button>
         </form>
     </div>
 
@@ -113,9 +213,35 @@
     </div>
 </div>
 
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script>
+/* ======================================================================
+   CHẾ ĐỘ NHÚNG: portal có thể nằm trong drawer của trang chủ (iframe)
+   -> không cần chuyển trang khi đăng nhập / quản lý lớp / vào phòng thi
+   ====================================================================== */
+const EMBEDDED = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+if (EMBEDDED) document.body.classList.add('embedded');
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+}
+// Cùng origin nên dùng chung lựa chọn giao diện với trang chủ
+applyTheme(localStorage.getItem('olympiaTheme') || 'light');
+window.addEventListener('storage', (e) => {
+    if (e.key === 'olympiaTheme') applyTheme(e.newValue);
+});
+window.addEventListener('message', (e) => {
+    if (e.origin !== location.origin || !e.data) return;
+    if (e.data.source === 'olympia-host' && e.data.type === 'theme') applyTheme(e.data.theme);
+});
+// Gửi tín hiệu cho trang chủ (chỉ khi đang được nhúng)
+function notifyHost(payload) {
+    if (!EMBEDDED) return false;
+    try { window.parent.postMessage({ source: 'olympia-portal', ...payload }, location.origin); return true; }
+    catch (e) { return false; }
+}
+
 const state = { user: null, tab: '', classes: [], exams: [], currentClass: null, results: null };
 
 const $ = (id) => document.getElementById(id);
@@ -142,7 +268,23 @@ async function api(path, opts = {}) {
     if (!res.ok) throw new Error((data && data.error) || ('Lỗi ' + res.status));
     return data;
 }
-const roleName = r => ({teacher:'Giáo viên', student:'Học sinh', class_monitor:'Lớp trưởng', team_leader:'Tổ trưởng'}[r] || r);
+const roleName = r => ({teacher:'Giáo viên', student:'Học sinh', class_monitor:'Lớp trưởng',
+    vice_class_monitor:'Lớp phó', team_leader:'Tổ trưởng'}[r] || r || '');
+const KNOWN_ROLES = ['student', 'vice_class_monitor', 'class_monitor', 'team_leader'];
+const roleBadge = (id, label) =>
+    `<span class="role-badge ${KNOWN_ROLES.includes(id) ? 'role-' + id : 'role-custom'}">${esc(label || roleName(id))}</span>`;
+
+function setBusy(button, busy, label) {
+    if (!button) return;
+    if (busy) {
+        button.dataset.idleLabel = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${label}`;
+    } else {
+        button.disabled = false;
+        button.innerHTML = button.dataset.idleLabel || button.innerHTML;
+    }
+}
 
 async function boot() {
     try {
@@ -209,7 +351,8 @@ async function viewClasses() {
     html += '<div class="grid cols-2">' + (state.classes.length ? state.classes.map(c => {
         const mine = c.my_role;
         const badge = c.is_teacher ? '<span class="role-badge role-teacher">Giáo viên CN</span>'
-            : (mine && mine !== 'student' ? `<span class="role-badge role-${mine}">${roleName(mine)}</span>` : '');
+            : (mine && mine !== 'student'
+                ? roleBadge(mine, c.my_role_label) : '');
         return `<div class="card" style="margin:0">
             <h3>${esc(c.name)} ${c.grade ? `<span class="tag">Khối ${esc(c.grade)}</span>` : ''} ${badge}</h3>
             <p class="sub">Mã lớp: <span class="code">${esc(c.join_code)}</span>
@@ -244,42 +387,95 @@ async function viewClasses() {
 async function openClass(classId) {
     const { class: c } = await api('/api/classes/' + classId);
     state.currentClass = c;
-    const canManage = c.is_teacher;
-    const canSeeScore = c.is_teacher || c.my_role === 'class_monitor' || c.my_role === 'team_leader';
+    const isOwner = c.is_teacher;
+    const perms = c.permissions || [];
+    const can = p => isOwner || perms.includes(p);
+    const canManage = isOwner;
+    const canManageTeams = can('manage_teams');
+    const canAssign = can('assign_roles');
+    const canSeeScore = isOwner || perms.includes('view_class_results') || perms.includes('view_team_results');
+    const roleOptions = [['student', 'Học sinh'], ['vice_class_monitor', 'Lớp phó'],
+                         ['class_monitor', 'Lớp trưởng'], ['team_leader', 'Tổ trưởng']]
+        .concat((c.roles || []).map(r => [r.id, r.name]));
+    const roleOf = id => (roleOptions.find(o => o[0] === id) || [id, id])[1] || '—';
+    let catalog = null;
+    if (canAssign) {
+        try { catalog = await api(`/api/classes/${c.id}/roles`); } catch (e) { catalog = null; }
+    }
 
     let html = `<div class="card">
         <div class="row" style="justify-content:space-between">
             <div><h3>📖 ${esc(c.name)} ${c.grade ? `<span class="tag">Khối ${esc(c.grade)}</span>` : ''}</h3>
             <p class="sub">Giáo viên: <b>${esc(c.teacher_name)}</b> · Mã lớp <span class="code">${esc(c.join_code)}</span>
-            ${c.my_role ? ` · Vai trò của bạn: <b>${roleName(c.my_role)}</b>` : ''}</p></div>
+            ${c.my_role ? ` · Vai trò của bạn: <b>${esc(c.my_role_label || roleOf(c.my_role))}</b>` : ''}</p></div>
             <button class="btn sec sm" id="backClasses">← Quay lại</button>
         </div>`;
 
-    if (canManage) {
+    if (canManageTeams) {
         html += `<div class="row" style="margin-top:6px">
             <input id="newTeamName" placeholder="Tên tổ mới" style="max-width:200px">
             <button class="btn sm" id="addTeamBtn">➕ Thêm tổ</button>
         </div>
         <div class="row" style="margin-top:8px">${c.teams.length ? c.teams.map(t =>
-            `<span class="tag">${esc(t.name)} <button class="btn danger sm" data-delteam="${t.id}">✕</button></span>`
+            `<span class="tag">${esc(t.name)} ${canManage ? `<button class="btn danger sm" data-delteam="${t.id}">✕</button>` : ''}</span>`
         ).join('') : '<span class="muted">Chưa có tổ nào.</span>'}</div>`;
     }
-    html += `<div style="overflow-x:auto;margin-top:14px"><table class="pt">
+
+    if (catalog) {
+        const chip = p => `<span class="tag">${esc((catalog.permissions.find(x => x.id === p) || {}).label || p)}</span>`;
+        html += `<div class="card" style="margin-top:14px"><h3>🔐 Vai trò &amp; quyền của lớp</h3>
+            <p class="sub">Giáo viên chủ nhiệm luôn có đủ mọi quyền. Vai trò tạo riêng chỉ nhận đúng những quyền được tick.</p>
+            <div class="tbl-wrap"><table class="pt"><thead><tr><th>Vai trò</th><th>Quyền được cấp</th>${isOwner ? '<th></th>' : ''}</tr></thead><tbody>` +
+            catalog.builtin.map(r => `<tr><td>${roleBadge(r.id, r.name)}</td>
+                <td>${r.permissions.length ? r.permissions.map(chip).join(' ') : '<span class="muted">Không có quyền nào</span>'}</td>
+                ${isOwner ? '<td class="muted">Có sẵn</td>' : ''}</tr>`).join('') +
+            catalog.custom.map(r => `<tr><td>${roleBadge(r.id, r.name)}</td>
+                <td>${r.permissions.length ? r.permissions.map(chip).join(' ') : '<span class="muted">Không có quyền nào</span>'}</td>
+                ${isOwner ? `<td class="row"><button class="btn sec sm" data-editrole="${esc(r.id)}">Sửa</button>
+                    <button class="btn danger sm" data-delrole="${esc(r.id)}">Xóa</button></td>` : ''}</tr>`).join('') +
+            `</tbody></table></div>`;
+        if (isOwner) {
+            html += `<div style="margin-top:12px;border-top:1px dashed var(--p-line);padding-top:10px">
+                <b style="font-size:.85rem">➕ Tạo vai trò riêng</b>
+                <div class="row" style="margin-top:6px">
+                    <input id="newRoleName" placeholder="Tên vai trò, ví dụ: Thủ quỹ" style="max-width:240px" maxlength="40">
+                </div>
+                <div class="row" style="margin-top:6px">` +
+                catalog.permissions.map(p =>
+                    `<label class="tag" style="cursor:pointer"><input type="checkbox" class="newRolePerm" value="${esc(p.id)}" style="width:auto"> ${esc(p.label)}</label>`
+                ).join('') + `</div>
+                <button class="btn sm" id="addRoleBtn" style="margin-top:8px">Tạo vai trò</button>
+                <span class="muted" id="roleHint"></span>
+            </div></div>`;
+        }
+    }
+
+    if (isOwner) {
+        html += `<div class="card" style="margin-top:14px"><h3>⚙️ Cài đặt lớp</h3>
+            <div class="row" style="margin-top:8px">
+                <input id="editClassName" value="${esc(c.name)}" placeholder="Tên lớp" style="max-width:220px" maxlength="60">
+                <input id="editClassGrade" value="${esc(c.grade || '')}" placeholder="Khối" style="max-width:120px" maxlength="30">
+                <button class="btn sm" id="saveClassBtn">Lưu thông tin</button>
+                <button class="btn sec sm" id="regenCodeBtn">🔄 Đổi mã lớp</button>
+                <button class="btn danger sm" id="deleteClassBtn">🗑 Xóa lớp</button>
+            </div>
+            <p class="sub" style="margin-top:8px">Xóa lớp sẽ gỡ lớp khỏi mọi đề thi đang gán. Hành động không hoàn tác.</p></div>`;
+    }
+
+    html += `<div class="tbl-wrap" style="margin-top:14px"><table class="pt">
         <thead><tr><th>Họ tên</th><th>Email</th><th>Tổ</th><th>Vai trò</th>${canManage ? '<th></th>' : ''}</tr></thead><tbody>`;
     for (const m of c.members) {
-        const roleTag = m.role === 'student' ? '<span class="tag">Học sinh</span>'
-            : `<span class="role-badge role-${m.role}">${roleName(m.role)}</span>`;
-        const teamSel = canManage
+        const roleTag = m.role === 'student' ? '<span class="tag">Học sinh</span>' : roleBadge(m.role, m.role_label);
+        const teamSel = canManageTeams
             ? `<select data-team="${m.user_id}"><option value="">-- Không tổ --</option>` +
               c.teams.map(t => `<option value="${t.id}" ${m.team_id === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('') +
               '</select>'
             : esc((c.teams.find(t => t.id === m.team_id) || {}).name || '-');
-        const roleSel = canManage
-            ? `<select data-role="${m.user_id}">
-                 <option value="student" ${m.role === 'student' ? 'selected' : ''}>Học sinh</option>
-                 <option value="class_monitor" ${m.role === 'class_monitor' ? 'selected' : ''}>Lớp trưởng</option>
-                 <option value="team_leader" ${m.role === 'team_leader' ? 'selected' : ''}>Tổ trưởng</option>
-               </select>`
+        const roleSel = canAssign
+            ? `<select data-role="${m.user_id}">` +
+              roleOptions.map(([id, label]) =>
+                  `<option value="${esc(id)}" ${m.role === id ? 'selected' : ''}>${esc(label)}</option>`).join('') +
+              `</select>`
             : roleTag;
         html += `<tr><td><b>${esc(m.name)}</b></td><td class="muted">${esc(m.email)}</td>
             <td>${teamSel}</td><td>${roleSel}</td>
@@ -298,7 +494,7 @@ async function openClass(classId) {
     $('panel').innerHTML = html;
 
     $('backClasses').onclick = () => loadTab();
-    if (canManage) {
+    if (canManageTeams) {
         $('addTeamBtn').onclick = async () => {
             try {
                 await api(`/api/classes/${c.id}/teams`, {method: 'POST', json: {name: $('newTeamName').value}});
@@ -309,13 +505,6 @@ async function openClass(classId) {
             try { await api(`/api/classes/${c.id}/teams/${b.dataset.delteam}`, {method: 'DELETE'});
                   toast('Đã xóa tổ'); openClass(c.id); } catch (e) { toast(e.message, true); }
         });
-        $('panel').querySelectorAll('[data-role]').forEach(sel => sel.onchange = async () => {
-            try {
-                await api(`/api/classes/${c.id}/members/${sel.dataset.role}`,
-                          {method: 'PATCH', json: {role: sel.value}});
-                toast('Đã cập nhật vai trò ✓'); openClass(c.id);
-            } catch (e) { toast(e.message, true); loadTab(); }
-        });
         $('panel').querySelectorAll('[data-team]').forEach(sel => sel.onchange = async () => {
             try {
                 await api(`/api/classes/${c.id}/members/${sel.dataset.team}`,
@@ -323,10 +512,74 @@ async function openClass(classId) {
                 toast('Đã xếp tổ ✓');
             } catch (e) { toast(e.message, true); openClass(c.id); }
         });
+    }
+    if (canAssign) {
+        $('panel').querySelectorAll('[data-role]').forEach(sel => sel.onchange = async () => {
+            try {
+                await api(`/api/classes/${c.id}/members/${sel.dataset.role}`,
+                          {method: 'PATCH', json: {role: sel.value}});
+                toast('Đã cập nhật vai trò ✓'); openClass(c.id);
+            } catch (e) { toast(e.message, true); openClass(c.id); }
+        });
+    }
+    if (canManage) {
         $('panel').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
             try { await api(`/api/classes/${c.id}/members/${b.dataset.del}`, {method: 'DELETE'});
                   toast('Đã xóa thành viên'); openClass(c.id); } catch (e) { toast(e.message, true); }
         });
+
+        const addRoleBtn = $('addRoleBtn');
+        if (addRoleBtn) addRoleBtn.onclick = async () => {
+            const name = $('newRoleName').value.trim();
+            if (!name) return toast('Nhập tên vai trò trước', true);
+            const permissions = [...document.querySelectorAll('.newRolePerm:checked')].map(x => x.value);
+            const editing = addRoleBtn.dataset.editing;
+            try {
+                if (editing) {
+                    await api(`/api/classes/${c.id}/roles/${editing}`,
+                              {method: 'PATCH', json: {name, permissions}});
+                    toast('Đã cập nhật vai trò ✓');
+                } else {
+                    await api(`/api/classes/${c.id}/roles`, {method: 'POST', json: {name, permissions}});
+                    toast('Đã tạo vai trò mới ✓');
+                }
+                openClass(c.id);
+            } catch (e) { toast(e.message, true); }
+        };
+        $('panel').querySelectorAll('[data-editrole]').forEach(b => b.onclick = () => {
+            const r = (c.roles || []).find(x => x.id === b.dataset.editrole);
+            if (!r) return;
+            $('newRoleName').value = r.name;
+            document.querySelectorAll('.newRolePerm').forEach(cb =>
+                cb.checked = (r.permissions || []).includes(cb.value));
+            addRoleBtn.dataset.editing = r.id;
+            addRoleBtn.textContent = 'Lưu thay đổi';
+            $('newRoleName').focus();
+        });
+        $('panel').querySelectorAll('[data-delrole]').forEach(b => b.onclick = async () => {
+            if (!confirm('Xóa vai trò này? Thành viên đang giữ vai trò sẽ trở về Học sinh.')) return;
+            try { await api(`/api/classes/${c.id}/roles/${b.dataset.delrole}`, {method: 'DELETE'});
+                  toast('Đã xóa vai trò'); openClass(c.id); } catch (e) { toast(e.message, true); }
+        });
+
+        $('saveClassBtn').onclick = async () => {
+            try {
+                await api('/api/classes/' + c.id, {method: 'PATCH',
+                    json: {name: $('editClassName').value, grade: $('editClassGrade').value}});
+                toast('Đã lưu thông tin lớp ✓'); openClass(c.id);
+            } catch (e) { toast(e.message, true); }
+        };
+        $('regenCodeBtn').onclick = async () => {
+            try {
+                const r = await api(`/api/classes/${c.id}/regen-code`, {method: 'POST'});
+                toast('Mã lớp mới: ' + r.class.join_code); openClass(c.id);
+            } catch (e) { toast(e.message, true); }
+        };
+        $('deleteClassBtn').onclick = async () => {
+            if (!confirm('Xóa lớp này? Đề thi sẽ mất liên kết với lớp. Không hoàn tác.')) return;
+            try { await api('/api/classes/' + c.id, {method: 'DELETE'});
+                  toast('Đã xóa lớp'); loadTab(); } catch (e) { toast(e.message, true); }
+        };
     }
     if (canSeeScore) await renderClassScores(c.id, $('scoreArea'));
 }
@@ -338,21 +591,22 @@ async function renderClassScores(classId, mount) {
         const best = r => r.best_score === null ? '—' : `${r.best_score}/40`;
         let html = `<div class="card"><div class="row" style="justify-content:space-between">
             <div><h3>🏆 Bảng điểm lớp</h3>
-            <p class="sub">${esc(data.class.name)} · Xem với tư cách: <b>${roleName(data.access)}</b>
+            <p class="sub">${esc(data.class.name)} · Xem với tư cách: <b>${esc(data.access_label || roleName(data.access))}</b>
             ${data.note ? ' · ' + esc(data.note) : ''}</p></div>
-            <button class="btn ok sm" id="csvBtn">⬇ Xuất CSV</button></div>
-            <table class="pt"><thead><tr><th>#</th><th>Học sinh</th><th>Tổ</th><th>Vai trò</th>
+            ${(data.permissions || []).includes('export_scores')
+                ? '<button class="btn ok sm" id="csvBtn">⬇ Xuất CSV</button>' : ''}</div>
+            <div class="tbl-wrap"><table class="pt"><thead><tr><th>#</th><th>Học sinh</th><th>Tổ</th><th>Vai trò</th>
             <th>Số lần nộp</th><th>Điểm cao nhất</th></tr></thead><tbody>`;
         data.rows.forEach((r, i) => {
             html += `<tr><td>${i + 1}</td><td><b>${esc(r.name)}</b></td><td>${esc(r.team)}</td>
                 <td>${r.role === 'student' ? '<span class="tag">HS</span>'
-                    : `<span class="role-badge role-${r.role}">${roleName(r.role)}</span>`}</td>
+                    : roleBadge(r.role, r.role_label)}</td>
                 <td>${r.attempts}</td><td><b>${best(r)}</b></td></tr>`;
         });
         if (!data.rows.length) html += '<tr><td colspan="6" class="empty">Chưa có học sinh.</td></tr>';
-        html += `</tbody></table>
+        html += `</tbody></table></div>
             <p class="sub" style="margin-top:12px">Chi tiết ${data.attempts.length} lượt nộp</p>
-            <div style="max-height:240px;overflow:auto"><table class="pt">
+            <div class="tbl-wrap" style="max-height:260px;overflow:auto"><table class="pt">
             <thead><tr><th>Thời gian</th><th>Học sinh</th><th>Đề</th><th>Điểm</th></tr></thead><tbody>`;
         data.attempts.slice(0, 50).forEach(a => {
             html += `<tr><td class="muted">${esc((a.submitted_at || '').replace('T', ' ').slice(0, 16))}</td>
@@ -361,10 +615,11 @@ async function renderClassScores(classId, mount) {
         });
         html += '</tbody></table></div></div>';
         mount.innerHTML = html;
-        $('csvBtn').onclick = () => {
+        const csvBtn = $('csvBtn');
+        if (csvBtn) csvBtn.onclick = () => {
             const lines = ['Stt,Ho ten,To,Vai tro,So lan nop,Diem cao nhat']
                 .concat(data.rows.map((r, i) =>
-                    [i + 1, r.name, r.team, roleName(r.role), r.attempts, r.best_score ?? '']
+                    [i + 1, r.name, r.team, (r.role_label || roleName(r.role)), r.attempts, r.best_score ?? '']
                         .map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')));
             const blob = new Blob(['\uFEFF' + lines.join('\n')], {type: 'text/csv;charset=utf-8'});
             const a = document.createElement('a');
@@ -386,13 +641,17 @@ async function viewExams() {
 
     if (isTeacher) {
         html += `<div class="card"><h3>➕ Tạo đề thi mới (AI sinh 40 câu từ tài liệu)</h3>
-            <p class="sub">Nhận file .pdf / .docx / .txt (tối đa 5MB). AI đọc tài liệu và ra 40 câu trắc nghiệm.</p>
+            <p class="sub">Chọn một bộ đề có sẵn trong kho, hoặc tải tài liệu .pdf / .docx / .txt (tối đa 5MB) để AI sinh 40 câu trắc nghiệm.</p>
+            <label class="fl" for="examQuiz">Dùng lại bộ đề trong kho</label>
+            <select id="examQuiz"><option value="">-- Tự sinh mới từ tài liệu --</option></select>
             <label class="fl" for="examTitle">Tên đề</label>
             <input id="examTitle" placeholder="Ví dụ: Đề thi thử THPT - Tuần 3" maxlength="120">
+            <label class="fl" for="examSubject">Môn / chủ đề (tùy chọn)</label>
+            <input id="examSubject" placeholder="Ví dụ: Toán" maxlength="60">
             <div class="grid cols-2">
                 <div><label class="fl" for="examDuration">Thời lượng (phút)</label>
                      <input id="examDuration" type="number" value="60" min="1" max="300"></div>
-                <div><label class="fl" for="examFile">Tài liệu</label>
+                <div><label class="fl" for="examFile">Tài liệu (bỏ qua nếu chọn bộ đề có sẵn)</label>
                      <input id="examFile" type="file" accept=".pdf,.docx,.txt,.md"></div>
             </div>
             <label class="fl">Gán ngay cho lớp (tùy chọn)</label>
@@ -409,7 +668,7 @@ async function viewExams() {
             ? classes.filter(c => e.class_ids.includes(c.id)).map(c => c.id) : [];
         return `<div class="card" style="margin:0">
             <h3>${esc(e.title)} <span class="tag ${e.published ? 'pub' : 'draft'}">${e.published ? 'ĐANG MỞ' : 'BẢN NHÁP'}</span></h3>
-            <p class="sub">${e.question_count} câu · ${e.duration_minutes} phút · ${esc(e.filename || 'không có file')}
+            <p class="sub">${e.subject ? '📚 ' + esc(e.subject) + ' · ' : ''}${e.question_count} câu · ${e.duration_minutes} phút · ${esc(e.filename || 'không có file')}
              ${clsNames ? ' · Lớp: ' + esc(clsNames) : ''}</p>`;
     }).join('') : '<div class="empty">Chưa có đề nào.</div>') + '</div>';
 
@@ -419,7 +678,7 @@ async function viewExams() {
         html += `<div class="grid cols-2" style="margin-top:4px">` + (state.exams.length ? state.exams.map(e => `
             <div class="card" style="margin:0">
                 <h3>${esc(e.title)}</h3>
-                <p class="sub">${e.question_count} câu · ${e.duration_minutes} phút
+                <p class="sub">${e.subject ? esc(e.subject) + ' · ' : ''}${e.question_count} câu · ${e.duration_minutes} phút
                  · ${e.done ? '✅ Đã nộp bài' : 'Chưa làm'}</p>
                 ${e.done ? '<span class="tag pub">Đã hoàn thành</span>'
                          : `<button class="btn" data-start="${e.id}">🎓 Vào phòng thi</button>`}
@@ -428,14 +687,25 @@ async function viewExams() {
     $('panel').innerHTML = html;
 
     if (isTeacher) {
+        const quizSel = $('examQuiz');
+        if (quizSel) {
+            fetch('/quizzes').then(r => r.ok ? r.json() : {quizzes: []}).then(d => {
+                quizSel.innerHTML = '<option value="">-- Tự sinh mới từ tài liệu --</option>' +
+                    (d.quizzes || []).map(q =>
+                        `<option value="${esc(q.id)}">${esc((q.subject ? '[' + q.subject + '] ' : '') + q.title)} (${q.question_count} câu)</option>`).join('');
+            }).catch(() => {});
+        }
         $('createExamBtn').onclick = async () => {
             const file = $('examFile').files[0];
-            if (!$('examTitle').value.trim()) return toast('Nhập tên đề trước', true);
-            if (!file) return toast('Chọn tài liệu để AI sinh câu hỏi', true);
+            const quizId = $('examQuiz') ? $('examQuiz').value : '';
+            if (!$('examTitle').value.trim() && !quizId) return toast('Nhập tên đề trước', true);
+            if (!quizId && !file) return toast('Chọn tài liệu hoặc một bộ đề có sẵn trong kho', true);
             const fd = new FormData();
             fd.append('title', $('examTitle').value.trim());
+            fd.append('subject', $('examSubject') ? $('examSubject').value.trim() : '');
             fd.append('duration_minutes', $('examDuration').value || 60);
-            fd.append('file', file);
+            if (quizId) fd.append('quiz_id', quizId);
+            else fd.append('file', file);
             const ids = [...document.querySelectorAll('.clsPick:checked')].map(c => c.value);
             fd.append('class_ids', JSON.stringify(ids));
             const btn = $('createExamBtn');
@@ -450,6 +720,8 @@ async function viewExams() {
         await renderExamDetail();
     } else {
         $('panel').querySelectorAll('[data-start]').forEach(b => b.onclick = () => {
+            // Đang nằm trong drawer của trang chủ -> thi ngay tại trang, không chuyển trang
+            if (notifyHost({type: 'start-exam', examId: b.dataset.start})) return;
             location.href = '/?exam=' + b.dataset.start;
         });
     }
@@ -507,11 +779,11 @@ async function renderExamDetail() {
         try {
             const data = await api(`/api/exams/${b.dataset.score}/results`);
             let rows = `<div class="card"><h3>🏆 Kết quả: ${esc(data.exam.title)}</h3>
-                <table class="pt"><thead><tr><th>#</th><th>Học sinh</th><th>Điểm</th><th>Thời gian làm</th></tr></thead><tbody>`;
+                <div class="tbl-wrap"><table class="pt"><thead><tr><th>#</th><th>Học sinh</th><th>Điểm</th><th>Thời gian làm</th></tr></thead><tbody>`;
             data.results.forEach((r, i) => rows += `<tr><td>${i + 1}</td><td>${esc(r.user_name)}</td>
                 <td><b>${r.score}/${r.total}</b></td><td class="muted">${Math.floor(r.duration_sec / 60)}:${String(r.duration_sec % 60).padStart(2, '0')}</td></tr>`);
             if (!data.results.length) rows += '<tr><td colspan="4" class="empty">Chưa ai nộp bài.</td></tr>';
-            $('examScore').innerHTML = rows + '</tbody></table></div>';
+            $('examScore').innerHTML = rows + '</tbody></table></div></div>';
             $('examScore').scrollIntoView({behavior: 'smooth'});
         } catch (e) { toast(e.message, true); }
     });
@@ -534,7 +806,7 @@ async function viewResults() {
     }
     const mine = await api('/api/me/attempts');
     const classes = (await api('/api/classes')).classes;
-    let html = '<div class="card"><h3>📜 Lịch sử bài thi của tôi</h3><table class="pt"><thead><tr>' +
+    let html = '<div class="card"><h3>📜 Lịch sử bài thi của tôi</h3><div class="tbl-wrap"><table class="pt"><thead><tr>' +
         '<th>Thời gian</th><th>Đề</th><th>Điểm</th><th>Thời gian làm</th></tr></thead><tbody>';
     mine.attempts.forEach(a => {
         const m = Math.floor(a.duration_sec / 60), s = a.duration_sec % 60;
@@ -542,7 +814,7 @@ async function viewResults() {
             <td>${esc(a.exam_title)}</td><td><b>${a.score}/${a.total}</b></td><td>${m}:${String(s).padStart(2, '0')}</td></tr>`;
     });
     if (!mine.attempts.length) html += '<tr><td colspan="4" class="empty">Bạn chưa nộp bài nào.</td></tr>';
-    html += '</tbody></table></div>';
+    html += '</tbody></table></div></div>';
 
     const privileged = classes.filter(c => c.my_role === 'class_monitor' || c.my_role === 'team_leader');
     html += '<div class="grid cols-2">' + privileged.map(c =>
@@ -559,28 +831,40 @@ async function viewResults() {
 
 /* ---------------------------------------------------------- AUTH */
 $('tabLogin').onclick = () => { $('tabLogin').classList.add('active'); $('tabReg').classList.remove('active');
+    $('tabLogin').setAttribute('aria-selected', 'true'); $('tabReg').setAttribute('aria-selected', 'false');
     $('loginForm').classList.remove('hidden'); $('regForm').classList.add('hidden'); };
 $('tabReg').onclick = () => { $('tabReg').classList.add('active'); $('tabLogin').classList.remove('active');
+    $('tabReg').setAttribute('aria-selected', 'true'); $('tabLogin').setAttribute('aria-selected', 'false');
     $('regForm').classList.remove('hidden'); $('loginForm').classList.add('hidden'); };
 
 $('loginForm').onsubmit = async (e) => {
     e.preventDefault();
+    const button = $('loginSubmitBtn');
+    setBusy(button, true, 'Đang đăng nhập...');
     try {
         const r = await api('/api/auth/login', {method: 'POST', json: {
             email: $('loginEmail').value, password: $('loginPass').value}});
         state.user = r.user; state.tab = ''; toast(`Xin chào ${r.user.name} 👋`); render();
-    } catch (err) { toast(err.message, true); }
+        notifyHost({type: 'auth', user: r.user});
+    } catch (err) { toast(err.message, true); setBusy(button, false); }
 };
 $('regForm').onsubmit = async (e) => {
     e.preventDefault();
+    const button = $('regSubmitBtn');
+    setBusy(button, true, 'Đang tạo tài khoản...');
     try {
         const r = await api('/api/auth/register', {method: 'POST', json: {
             name: $('regName').value, email: $('regEmail').value,
             role: $('regRole').value, password: $('regPass').value}});
         state.user = r.user; state.tab = ''; toast('Tạo tài khoản thành công 🎉'); render();
-    } catch (err) { toast(err.message, true); }
+        notifyHost({type: 'auth', user: r.user});
+    } catch (err) { toast(err.message, true); setBusy(button, false); }
 };
-$('logoutBtn').onclick = async () => { await api('/api/auth/logout', {method: 'POST'}); location.reload(); };
+$('logoutBtn').onclick = async () => {
+    await api('/api/auth/logout', {method: 'POST'});
+    notifyHost({type: 'auth', user: null});
+    location.reload();
+};
 
 boot();
 </script>

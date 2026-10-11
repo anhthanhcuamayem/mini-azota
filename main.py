@@ -13,6 +13,8 @@ import uuid
 
 import requests
 
+import school_store as store
+import supabase_store as db
 from school_api import router as school_router
 
 app = FastAPI()
@@ -39,11 +41,8 @@ async def get_style():
         return FileResponse("style.css", media_type="text/css")
     return HTMLResponse("", status_code=404)
 
-DATA_FILE = "history.json"
-SESSIONS_FILE = "sessions.json"
 EXAM_DURATION_MINUTES = 60
 EXAM_QUESTION_COUNT = 40
-BANK_FILE = "exam_bank.json"
 AI_CONFIG_FILE = "ai_config.json"
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 MIN_SOURCE_CHARS = 200
@@ -115,104 +114,42 @@ def format_duration(seconds):
     secs = seconds % 60
     return f"{mins:02d}:{secs:02d}"
 
-def save_session(session_id, name, start_time, shuffled_questions=None):
-    sessions = {}
-    if os.path.exists(SESSIONS_FILE):
-        with open(SESSIONS_FILE, "r", encoding="utf-8") as f:
-            try:
-                sessions = json.load(f)
-            except:
-                sessions = {}
-    sessions[session_id] = {
-        "name": name,
-        "start_time": start_time.isoformat(),
-        "shuffled_questions": shuffled_questions
-    }
-    with open(SESSIONS_FILE + ".tmp", "w", encoding="utf-8") as f:
-        json.dump(sessions, f, ensure_ascii=False, indent=4)
-    os.replace(SESSIONS_FILE + ".tmp", SESSIONS_FILE)
+def save_session(session_id, name, start_time, shuffled_questions=None, quiz_id=None):
+    """Lưu phiên làm bài (ẩn danh) vào Supabase."""
+    store.save_exam_session(session_id, name, start_time, shuffled_questions or [],
+                            None, None, quiz_id=quiz_id)
+
 
 def get_session(session_id):
-    if not os.path.exists(SESSIONS_FILE):
-        return None
-    with open(SESSIONS_FILE, "r", encoding="utf-8") as f:
-        try:
-            sessions = json.load(f)
-            return sessions.get(session_id)
-        except:
-            return None
+    return store.get_exam_session(session_id)
+
 
 def delete_session(session_id):
-    if not os.path.exists(SESSIONS_FILE):
-        return
-    with open(SESSIONS_FILE, "r", encoding="utf-8") as f:
-        try:
-            sessions = json.load(f)
-        except:
-            sessions = {}
-    if session_id in sessions:
-        del sessions[session_id]
-    with open(SESSIONS_FILE + ".tmp", "w", encoding="utf-8") as f:
-        json.dump(sessions, f, ensure_ascii=False, indent=4)
-    os.replace(SESSIONS_FILE + ".tmp", SESSIONS_FILE)
+    store.delete_exam_session(session_id)
+
 
 def cleanup_old_sessions(max_age_hours=2):
-    if not os.path.exists(SESSIONS_FILE):
-        return
-    with open(SESSIONS_FILE, "r", encoding="utf-8") as f:
-        try:
-            sessions = json.load(f)
-        except:
-            sessions = {}
-    now = get_current_utc()
-    expired = []
-    for sid, data in sessions.items():
-        try:
-            start = datetime.fromisoformat(data["start_time"])
-            if (now - start).total_seconds() > max_age_hours * 3600:
-                expired.append(sid)
-        except:
-            expired.append(sid)
-    if expired:
-        for sid in expired:
-            del sessions[sid]
-        with open(SESSIONS_FILE + ".tmp", "w", encoding="utf-8") as f:
-            json.dump(sessions, f, ensure_ascii=False, indent=4)
-        os.replace(SESSIONS_FILE + ".tmp", SESSIONS_FILE)
+    store.cleanup_old_sessions(max_age_hours)
+
 
 def save_submission(entry):
-    submissions = []
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            try:
-                submissions = json.load(f)
-            except:
-                submissions = []
-    submissions.append(entry)
-    with open(DATA_FILE + ".tmp", "w", encoding="utf-8") as f:
-        json.dump(submissions, f, ensure_ascii=False, indent=4)
-    os.replace(DATA_FILE + ".tmp", DATA_FILE)
+    store.save_attempt(entry)
 
-# ---------------- Ngân hàng đề thi (sinh bằng AI từ tài liệu) ----------------
+
+def to_vn_display(iso):
+    """Đổi ISO UTC sang chuỗi giờ Việt Nam để hiển thị."""
+    try:
+        dt = datetime.fromisoformat(iso)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone(timedelta(hours=7))).strftime("%H:%M:%S %d/%m/%Y")
+    except (ValueError, TypeError):
+        return iso or ""
+
+
+# ---------------- Kho bộ đề (sinh bằng AI từ tài liệu) ----------------
 class AIError(Exception):
     """Lỗi khi gọi AI sinh đề."""
-
-
-def load_bank():
-    if not os.path.exists(BANK_FILE):
-        return None
-    try:
-        with open(BANK_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (OSError, ValueError):
-        return None
-
-
-def save_bank(bank):
-    tmp = BANK_FILE + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(bank, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, BANK_FILE)
 
 
 def extract_text(filename, data):
@@ -401,14 +338,37 @@ async def get_home():
     with open("index.html", "r", encoding="utf-8") as f:
         return f.read()
 
-@app.get("/get-questions")
-async def get_questions():
-    bank = load_bank()
-    if not bank:
-        return JSONResponse(status_code=503, content={"error": "Chưa có đề thi. Hãy tải tài liệu lên trang /admin."})
-    if bank.get("mode") == "random":
-        return JSONResponse(status_code=503, content={"error": "Đề được sinh ngẫu nhiên theo từng lượt thi, không có bộ đề chung."})
-    questions = bank.get("questions") or []
+def _public_quiz(quiz):
+    return {
+        "id": quiz.get("id"),
+        "title": quiz.get("title"),
+        "subject": quiz.get("subject"),
+        "mode": quiz.get("mode"),
+        "question_count": len(quiz.get("questions") or []),
+        "created_at": quiz.get("created_at"),
+    }
+
+
+@app.get("/quizzes")
+async def list_quiz_sets():
+    """Danh sách các bộ đề để học sinh chọn làm (không kèm đáp án)."""
+    try:
+        quizzes = store.list_quizzes()
+    except db.SupabaseError as e:
+        return JSONResponse(status_code=503, content={"error": str(e)})
+    return {"quizzes": [_public_quiz(q) for q in quizzes]}
+
+
+@app.get("/quizzes/{quiz_id}/questions")
+async def quiz_questions(quiz_id: str):
+    quiz = store.get_quiz(quiz_id)
+    if not quiz:
+        return JSONResponse(status_code=404, content={"error": "Không tìm thấy bộ đề."})
+    if quiz.get("mode") == "random":
+        return JSONResponse(status_code=503, content={"error": "Bộ đề này sinh ngẫu nhiên theo từng lượt thi."})
+    questions = quiz.get("questions") or []
+    if not questions:
+        return JSONResponse(status_code=503, content={"error": "Bộ đề chưa có câu hỏi."})
     # Never expose answer keys through the public question endpoint.
     return [{k: v for k, v in q.items() if k != "correctText"} for q in questions]
 
@@ -416,26 +376,29 @@ async def get_questions():
 async def start_exam(request: Request):
     try:
         data = await request.json()
-        name = data.get("name", "").strip()
+        name = (data.get("name") or "").strip()
+        quiz_id = (data.get("quiz_id") or "").strip()
         if not name:
             return JSONResponse(status_code=400, content={"error": "Vui lòng nhập họ tên thí sinh!"})
         if len(name) > 50:
             return JSONResponse(status_code=400, content={"error": "Tên không được quá 50 ký tự!"})
+        if not quiz_id:
+            return JSONResponse(status_code=400, content={"error": "Vui lòng chọn bộ đề trước khi bắt đầu!"})
+        quiz = store.get_quiz(quiz_id)
+        if not quiz:
+            return JSONResponse(status_code=404, content={"error": "Bộ đề không tồn tại hoặc đã bị xóa."})
         # The server owns the answer key and creates the exam order. Never trust
         # question content or correct answers supplied by the browser.
-        bank = load_bank()
-        if not bank:
-            return JSONResponse(status_code=503, content={"error": "Chưa có đề thi. Hãy tải tài liệu lên trang /admin trước."})
-        if bank.get("mode") == "random":
+        if quiz.get("mode") == "random":
             try:
-                questions = await asyncio.to_thread(generate_questions, bank.get("source_text", ""))
+                questions = await asyncio.to_thread(generate_questions, quiz.get("source_text") or "")
             except AIError as e:
                 return JSONResponse(status_code=502, content={"error": str(e)})
         else:
-            questions = bank.get("questions") or []
-            if len(questions) != EXAM_QUESTION_COUNT:
-                return JSONResponse(status_code=503, content={"error": "Đề thi chưa sẵn sàng (chưa sinh đủ 40 câu). Vào /admin để sinh đề."})
-        # Tạo bản sao để không làm thay đổi ngân hàng đề khi xáo trộn
+            questions = quiz.get("questions") or []
+            if not questions:
+                return JSONResponse(status_code=503, content={"error": "Bộ đề chưa sẵn sàng (chưa có câu hỏi). Vào /admin để sinh đề."})
+        # Tạo bản sao để không làm thay đổi kho bộ đề khi xáo trộn
         questions = [{**q, "options": list(q.get("options", []))} for q in questions]
         random.shuffle(questions)
         for question in questions:
@@ -443,11 +406,13 @@ async def start_exam(request: Request):
         cleanup_old_sessions()
         session_id = str(uuid.uuid4())
         start_time = get_current_utc()
-        save_session(session_id, name, start_time, questions)
+        save_session(session_id, name, start_time, questions, quiz_id=quiz_id)
         return {
             "session_id": session_id,
             "start_time": start_time.isoformat(),
             "duration_minutes": EXAM_DURATION_MINUTES,
+            "title": quiz.get("title"),
+            "subject": quiz.get("subject"),
             "questions": [
                 {key: value for key, value in question.items() if key != "correctText"}
                 for question in questions
@@ -466,20 +431,16 @@ async def handle_submit(request: Request):
         session = get_session(session_id)
         if not session:
             return JSONResponse(status_code=400, content={"error": "Phiên làm bài đã hết hạn hoặc không tồn tại!"})
+        shuffled_questions = session.get("shuffled_questions") or []
+        total = len(shuffled_questions)
         user_answers = data.get("answers", [])
-        if not isinstance(user_answers, list) or len(user_answers) != 40 or any(
+        if not isinstance(user_answers, list) or total == 0 or len(user_answers) != total or any(
             answer is not None and not isinstance(answer, str) for answer in user_answers
         ):
             return JSONResponse(status_code=400, content={"error": "Dữ liệu câu trả lời không hợp lệ!"})
-        shuffled_questions = session.get("shuffled_questions")
-        if not shuffled_questions or len(shuffled_questions) != 40:
-            return JSONResponse(status_code=500, content={"error": "Lỗi dữ liệu câu hỏi trong session!"})
         # Tính điểm dựa trên thứ tự đã xáo trộn
-        score = 0
-        for i in range(40):
-            correct = shuffled_questions[i].get("correctText", "")
-            if correct and user_answers[i] == correct:
-                score += 1
+        score = sum(1 for i, q in enumerate(shuffled_questions)
+                    if q.get("correctText") and user_answers[i] == q.get("correctText"))
         start_time = datetime.fromisoformat(session["start_time"])
         now = get_current_utc()
         duration_sec = int((now - start_time).total_seconds())
@@ -487,24 +448,32 @@ async def handle_submit(request: Request):
             delete_session(session_id)
             return JSONResponse(status_code=400, content={"error": "Đã hết thời gian làm bài."})
         duration_fmt = format_duration(duration_sec)
-        new_entry = {
-            "name": session["name"],
+        score_display = f"{score}/{total}"
+        quiz_title = ""
+        if session.get("quiz_id"):
+            quiz_title = (store.get_quiz(session["quiz_id"]) or {}).get("title") or ""
+        save_submission({
+            "id": uuid.uuid4().hex[:12],
+            "source": "anonymous",
+            "exam_id": None,
+            "quiz_id": session.get("quiz_id"),
+            "exam_title": quiz_title,
+            "user_id": None,
+            "user_name": session["name"],
             "score": score,
-            "score_display": f"{score}/40",
+            "total": total,
             "duration_sec": duration_sec,
-            "duration_formatted": duration_fmt,
-            "submitted_at_display": get_vn_time(),
-            "submitted_at_iso": now.isoformat(),
-            "answers": user_answers
-        }
-        save_submission(new_entry)
+            "started_at": session["start_time"],
+            "submitted_at": now.isoformat(),
+            "answers": user_answers,
+        })
         delete_session(session_id)
         return {
-            "score": f"{score}/40",
+            "score": score_display,
             "score_num": score,
             "message": "success",
             "name": session["name"],
-            "total_questions": 40,
+            "total_questions": total,
             "duration_formatted": duration_fmt,
             "duration_sec": duration_sec,
             "details": [
@@ -517,7 +486,7 @@ async def handle_submit(request: Request):
                     "correctAnswer": shuffled_questions[i].get("correctText", ""),
                     "isCorrect": (user_answers[i] == shuffled_questions[i].get("correctText", "")) if shuffled_questions[i].get("correctText", "") else False
                 }
-                for i in range(40)
+                for i in range(total)
             ]
         }
     except Exception as e:
@@ -548,22 +517,20 @@ async def portal_page():
 
 @app.get("/admin/status")
 async def admin_status():
-    bank = load_bank()
-    bank_info = None
-    if bank:
-        bank_info = {
-            "mode": bank.get("mode"),
-            "filename": bank.get("filename"),
-            "questions": len(bank.get("questions") or []),
-            "uploaded_at": bank.get("uploaded_at"),
-            "generated_at": bank.get("generated_at"),
-            "source_chars": len(bank.get("source_text") or ""),
-        }
+    try:
+        quizzes = store.list_quizzes()
+    except db.SupabaseError as e:
+        return JSONResponse(status_code=503, content={"error": str(e)})
     return {
         "ai_configured": bool(AI_BASE_URL and AI_API_KEY),
         "ai_model": AI_MODEL,
         "admin_protected": bool(ADMIN_KEY),
-        "bank": bank_info,
+        "quizzes": [{
+            **_public_quiz(q),
+            "filename": q.get("filename"),
+            "source_chars": len(q.get("source_text") or ""),
+            "updated_at": q.get("updated_at"),
+        } for q in quizzes],
     }
 
 
@@ -602,7 +569,9 @@ async def admin_test_api(request: Request, payload: dict):
 
 
 @app.post("/admin/upload")
-async def admin_upload(request: Request, file: UploadFile = File(...), mode: str = Form("shared"), admin_key: str = Form("")):
+async def admin_upload(request: Request, file: UploadFile = File(...),
+                       title: str = Form(""), subject: str = Form(""),
+                       mode: str = Form("shared"), admin_key: str = Form("")):
     if not admin_authorized(request, admin_key):
         return JSONResponse(status_code=403, content={"error": "Sai admin key."})
     if mode not in ("shared", "random"):
@@ -618,88 +587,110 @@ async def admin_upload(request: Request, file: UploadFile = File(...), mode: str
         return JSONResponse(status_code=400, content={"error": str(e)})
     if len(text.strip()) < MIN_SOURCE_CHARS:
         return JSONResponse(status_code=400, content={"error": "Không trích được nội dung đủ dài từ tài liệu (cần ít nhất 200 ký tự)."})
-    bank = {
-        "mode": mode,
-        "filename": file.filename,
-        "source_text": text,
-        "uploaded_at": get_current_utc().isoformat(),
-        "generated_at": None,
-        "questions": [],
-    }
+
+    quiz_title = (title or "").strip() or os.path.splitext(file.filename or "Bộ đề")[0]
+    questions = []
     if mode == "shared":
         try:
             questions = await asyncio.to_thread(generate_questions, text)
         except AIError as e:
-            save_bank(bank)  # vẫn giữ tài liệu để sinh lại sau
-            return JSONResponse(status_code=502, content={"error": str(e)})
-        bank["questions"] = questions
-        bank["generated_at"] = get_current_utc().isoformat()
-    save_bank(bank)
+            # vẫn lưu tài liệu để sinh lại sau
+            quiz, _ = store.create_quiz(quiz_title, subject, mode, [], text, file.filename)
+            return JSONResponse(status_code=502, content={"error": str(e),
+                                "quiz_id": (quiz or {}).get("id")})
+    quiz, error = store.create_quiz(quiz_title, subject, mode, questions, text, file.filename)
+    if error:
+        return JSONResponse(status_code=400, content={"error": error})
     return {
         "message": "success",
+        "quiz_id": quiz["id"],
+        "title": quiz["title"],
+        "subject": quiz["subject"],
         "mode": mode,
         "filename": file.filename,
-        "questions": len(bank["questions"]),
+        "questions": len(questions),
         "source_chars": len(text),
     }
 
 
-@app.post("/admin/generate")
-async def admin_generate(request: Request, admin_key: str = Form("")):
+@app.patch("/admin/quizzes/{quiz_id}")
+async def admin_update_quiz(request: Request, quiz_id: str, title: str = Form(""),
+                            subject: str = Form(""), admin_key: str = Form("")):
     if not admin_authorized(request, admin_key):
         return JSONResponse(status_code=403, content={"error": "Sai admin key."})
-    bank = load_bank()
-    if not bank or not bank.get("source_text"):
-        return JSONResponse(status_code=400, content={"error": "Chưa có tài liệu nào được tải lên."})
-    try:
-        questions = await asyncio.to_thread(generate_questions, bank["source_text"])
-    except AIError as e:
-        return JSONResponse(status_code=502, content={"error": str(e)})
-    bank["questions"] = questions
-    bank["generated_at"] = get_current_utc().isoformat()
-    save_bank(bank)
-    return {"message": "success", "questions": len(questions)}
+    fields = {}
+    if title.strip():
+        fields["title"] = title.strip()
+    if subject.strip():
+        fields["subject"] = subject.strip()
+    quiz, error = store.update_quiz(quiz_id, **fields)
+    if error:
+        return JSONResponse(status_code=404, content={"error": error})
+    return {"message": "success", "quiz": _public_quiz(quiz)}
+
+
+@app.delete("/admin/quizzes/{quiz_id}")
+async def admin_delete_quiz(request: Request, quiz_id: str, admin_key: str = ""):
+    if not admin_authorized(request, admin_key):
+        return JSONResponse(status_code=403, content={"error": "Sai admin key."})
+    _, error = store.delete_quiz(quiz_id)
+    if error:
+        return JSONResponse(status_code=404, content={"error": error})
+    return {"message": "success"}
 
 
 @app.get("/leaderboard")
 async def get_leaderboard():
-    if not os.path.exists(DATA_FILE):
-        return {"leaderboard": [], "total_questions": 40}
-    with open(DATA_FILE, "r", encoding="utf-8") as f:
-        submissions = json.load(f)
+    try:
+        submissions = store.anonymous_attempts()
+    except db.SupabaseError:
+        submissions = []
     best = {}
+    max_total = 0
     for sub in submissions:
-        name = sub["name"]
-        score = sub["score"]
-        dur = sub["duration_sec"]
-        if name not in best or score > best[name]["score"] or (score == best[name]["score"] and dur < best[name]["duration_sec"]):
+        name = sub.get("user_name") or ""
+        if not name:
+            continue
+        score = int(sub.get("score") or 0)
+        dur = int(sub.get("duration_sec") or 0)
+        total = int(sub.get("total") or 0)
+        max_total = max(max_total, total)
+        if (name not in best or score > best[name]["score"]
+                or (score == best[name]["score"] and dur < best[name]["duration_sec"])):
             best[name] = {
                 "name": name,
                 "score": score,
                 "duration_sec": dur,
-                "duration_formatted": sub["duration_formatted"]
+                "duration_formatted": format_duration(dur),
             }
     top3 = sorted(best.values(), key=lambda x: (-x["score"], x["duration_sec"]))[:3]
-    return {"leaderboard": top3, "total_questions": 40}
+    return {"leaderboard": top3, "total_questions": max_total or EXAM_QUESTION_COUNT}
 
 @app.get("/history/{name}")
 async def get_user_history(name: str):
-    if not os.path.exists(DATA_FILE):
-        return []
-    with open(DATA_FILE, "r", encoding="utf-8") as f:
-        submissions = json.load(f)
-    user_history = [s for s in submissions if s["name"] == name]
-    user_history.sort(key=lambda x: x.get("submitted_at_iso", ""), reverse=True)
-    for item in user_history:
-        item.pop("answers", None)
-    return user_history
+    try:
+        submissions = store.attempts_by_name(name)
+    except db.SupabaseError:
+        submissions = []
+    history = [{
+        "name": s.get("user_name"),
+        "score": s.get("score"),
+        "score_display": f"{s.get('score', 0)}/{s.get('total', 0)}",
+        "duration_sec": s.get("duration_sec"),
+        "duration_formatted": format_duration(s.get("duration_sec") or 0),
+        "submitted_at_display": to_vn_display(s.get("submitted_at")),
+        "submitted_at_iso": s.get("submitted_at"),
+        "exam_title": s.get("exam_title"),
+    } for s in submissions]
+    history.sort(key=lambda x: x.get("submitted_at_iso") or "", reverse=True)
+    return history
 
 @app.get("/admin-check-history")
 async def view_history():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
+    try:
+        return store.anonymous_attempts()
+    except db.SupabaseError:
+        return []
 
 if __name__ == "__main__":
     import uvicorn

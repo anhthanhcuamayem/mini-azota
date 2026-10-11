@@ -36,6 +36,15 @@
             </div>
         </a>
         <div class="nav-actions">
+            <!-- Tài khoản & lớp học: mở drawer ngay trong trang (không chuyển trang).
+                 Vẫn giữ href="/portal" để hoạt động khi JavaScript bị tắt. -->
+            <a href="/portal" class="icon-btn portal-open-btn" id="portalToggleBtn"
+               data-open-portal aria-haspopup="dialog" aria-controls="portalDrawer"
+               title="Cổng lớp học: đăng nhập / đăng ký tài khoản học sinh - giáo viên">
+                <i class="fa-solid fa-user-graduate" aria-hidden="true"></i>
+                <span class="portal-open-label" id="portalNavLabel">Tài khoản</span>
+            </a>
+
             <!-- Streak Flame Badge -->
             <div class="streak-badge" id="streakBadge">
                 <i class="fa-solid fa-fire"></i>
@@ -89,6 +98,18 @@
             </div>
         </div>
 
+        <!-- Chọn bộ đề -->
+        <div class="input-group" id="quizSelectGroup">
+            <label class="input-label" for="quizSelect">Chọn bộ đề muốn làm:</label>
+            <div class="input-wrapper">
+                <select id="quizSelect" class="quiz-select" aria-describedby="quizSelectHint">
+                    <option value="">Đang tải danh sách bộ đề...</option>
+                </select>
+                <i class="fa-solid fa-list-check input-icon"></i>
+            </div>
+            <p class="input-hint" id="quizSelectHint"><i class="fa-solid fa-circle-info"></i> Chọn bộ đề để xem đúng số câu và thời lượng trước khi bắt đầu.</p>
+        </div>
+
         <!-- Input Form -->
         <div class="input-group">
             <label class="input-label" for="fullname">Họ và tên thí sinh:</label>
@@ -98,12 +119,18 @@
             </div>
         </div>
 
-        <button class="btn-primary-fire" id="startExamBtn" style="margin-top: 24px;">
+        <button class="btn-primary-fire" id="startExamBtn" style="margin-top: 24px;" aria-describedby="startExamHint">
             <span>VÀO PHÒNG THI & BẮT ĐẦU</span>
             <i class="fa-solid fa-bolt-lightning"></i>
         </button>
+        <p class="start-exam-hint" id="startExamHint"><i class="fa-solid fa-shield-heart"></i> Bài làm được tự động lưu khi bạn chuyển câu.</p>
 
-        <div id="loginError" class="error-msg"></div>
+        <div id="loginError" class="error-msg" role="alert" aria-live="polite"></div>
+
+        <p class="hero-subtitle" style="margin-top:14px;font-size:.92rem">
+            Học sinh / giáo viên có tài khoản?
+            <a href="/portal" data-open-portal style="font-weight:800">Mở cổng lớp học ngay tại đây →</a>
+        </p>
 
         <div class="exam-notice-box">
             <strong><i class="fa-solid fa-circle-exclamation"></i> Quy chế & Tiện ích phòng thi:</strong>
@@ -121,7 +148,8 @@
                 </div>
                 <div>
                     <h2>BÀI THI THPT QUỐC GIA - TIẾNG ANH</h2>
-                    <div class="exam-sub" id="examProgressSub">Đã làm 0 / 40 câu (0%)</div>
+                    <div class="exam-sub" id="examProgressSub" aria-live="polite">Đã làm 0 / 40 câu (0%)</div>
+                    <div class="exam-progress-track" aria-hidden="true"><div class="exam-progress-fill" id="examProgressFill"></div></div>
                 </div>
             </div>
             <div class="header-user-actions">
@@ -164,7 +192,7 @@
                             <i class="fa-solid fa-circle-question"></i>
                             <span id="qBadgeText">Câu 1 / 40</span>
                         </div>
-                        <div class="q-status-tag unanswered" id="qStatusTag">
+                        <div class="q-status-tag unanswered" id="qStatusTag" role="status" aria-live="polite">
                             <i class="fa-regular fa-circle"></i> Chưa trả lời
                         </div>
                     </div>
@@ -176,7 +204,7 @@
 
                     <!-- Navigation Buttons -->
                     <div style="margin-top: 30px;">
-                        <div id="submitError" class="error-msg" style="margin-bottom: 12px;"></div>
+                        <div id="submitError" class="error-msg" role="alert" aria-live="polite" style="margin-bottom: 12px;"></div>
                         <div class="nav-buttons-bar">
                             <div class="nav-group-left">
                                 <button class="btn-nav" id="prevBtn" title="Câu trước (←)">
@@ -203,7 +231,7 @@
                     <div class="timer-header">
                         <i class="fa-solid fa-stopwatch"></i> Thời gian còn lại
                     </div>
-                    <div class="timer-value" id="timerDisplay">60:00</div>
+                    <div class="timer-value" id="timerDisplay" role="timer" aria-live="polite">60:00</div>
                     <div class="timer-progress-bg">
                         <div class="timer-progress-fill" id="timerProgressFill" style="width: 100%;"></div>
                     </div>
@@ -514,6 +542,39 @@
     </div>
 </div>
 
+<!-- ==========================================================================
+     CỔNG LỚP HỌC - DRAWER TRƯỢT (tài khoản, lớp, đề thi, bảng điểm) ngay trong trang
+     ========================================================================== -->
+<div class="portal-backdrop" id="portalBackdrop" hidden></div>
+<aside class="portal-drawer" id="portalDrawer" role="dialog" aria-modal="true"
+       aria-labelledby="portalDrawerTitle" tabindex="-1" hidden>
+    <header class="portal-drawer-head">
+        <div class="portal-drawer-title" id="portalDrawerTitle">
+            <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
+            <span>Cổng lớp học &amp; tài khoản</span>
+        </div>
+        <div class="portal-drawer-tools">
+            <a class="portal-drawer-tool" id="portalOpenTab" href="/portal" target="_blank"
+               rel="noopener" title="Mở cổng lớp học trong tab riêng">
+                <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                <span class="tool-label">Tab riêng</span>
+            </a>
+            <button type="button" class="portal-drawer-tool portal-drawer-close" id="portalCloseBtn"
+                    title="Đóng (Esc)" aria-label="Đóng cổng lớp học">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+        </div>
+    </header>
+    <div class="portal-drawer-body">
+        <div class="portal-drawer-loading" id="portalLoading">
+            <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+            <span>Đang mở cổng lớp học...</span>
+        </div>
+        <iframe id="portalFrame" title="Cổng lớp học: tài khoản, lớp học, đề thi và bảng điểm"
+                src="about:blank"></iframe>
+    </div>
+</aside>
+
 <!-- Floating Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -538,12 +599,19 @@
     let currentFilter = 'all';
     let isReviewMode = false;
     let submissionDetails = null;
+    let isSubmitting = false;
     // Chế độ thi theo đề được gán: /?exam=<id> (yêu cầu đăng nhập, ghi điểm vào tài khoản)
-    const EXAM_ID = new URLSearchParams(location.search).get('exam');
+    let EXAM_ID = new URLSearchParams(location.search).get('exam');
 
     function goHome() {
-        if (EXAM_ID) location.href = '/portal';
-        else location.reload();
+        // Thi theo đề của lớp: quay về trang chủ ngay trong trang, không tải lại,
+        // rồi mở cổng lớp học (thay vì nhảy sang /portal như trước).
+        if (EXAM_ID) {
+            resetToHomeMode();
+            openPortalDrawer();
+        } else {
+            location.reload();
+        }
     }
 
     // Feature toggles
@@ -570,6 +638,7 @@
     const qBadgeText = document.getElementById('qBadgeText');
     const qStatusTag = document.getElementById('qStatusTag');
     const examProgressSub = document.getElementById('examProgressSub');
+    const examProgressFill = document.getElementById('examProgressFill');
     const paletteAnsweredCount = document.getElementById('paletteAnsweredCount');
     const streakBadge = document.getElementById('streakBadge');
     const streakCount = document.getElementById('streakCount');
@@ -756,6 +825,7 @@
     // --- Timer Management ---
     function updateTimerDisplay() {
         timerDisplay.innerText = formatTime(timeLeftSeconds);
+        timerDisplay.setAttribute('aria-label', `Còn ${formatTime(timeLeftSeconds)}`);
         const totalSec = examDurationMin * 60;
         const pct = Math.max(0, Math.min(100, (timeLeftSeconds / totalSec) * 100));
         timerProgressFill.style.width = `${pct}%`;
@@ -870,6 +940,7 @@
         document.getElementById('countFlagged').innerText = flagged;
         paletteAnsweredCount.innerText = `${answered}/${total} đã làm`;
         examProgressSub.innerText = `Đã làm ${answered} / ${total} câu (${pct}%)`;
+        if (examProgressFill) examProgressFill.style.width = `${pct}%`;
     }
 
     function renderPalette() {
@@ -884,10 +955,14 @@
             if (currentFilter === 'unanswered' && isAnswered) continue;
             if (currentFilter === 'flagged' && !isFlagged) continue;
 
-            const btn = document.createElement('div');
+            const btn = document.createElement('button');
+            btn.type = 'button';
             btn.className = 'q-num-btn';
             btn.innerText = i + 1;
             btn.setAttribute('data-index', i);
+            btn.setAttribute('aria-label', `Mở câu ${i + 1}${isAnswered ? ', đã trả lời' : ', chưa trả lời'}${isFlagged ? ', đã gắn cờ' : ''}`);
+            btn.setAttribute('aria-current', currentIndex === i ? 'step' : 'false');
+            btn.title = `Câu ${i + 1}${isAnswered ? ' · Đã trả lời' : ' · Chưa trả lời'}${isFlagged ? ' · Đã gắn cờ' : ''}`;
 
             if (isAnswered) btn.classList.add('answered');
             if (currentIndex === i) btn.classList.add('current');
@@ -1003,7 +1078,7 @@
 
         // Options List with Elimination Support
         const currentElims = eliminatedOptions[currentIndex] || new Set();
-        html += `<div class="options-list" id="optionsList">`;
+        html += `<div class="options-list" id="optionsList" role="radiogroup" aria-label="Các phương án trả lời">`;
         const labels = ['A', 'B', 'C', 'D'];
 
         q.options.forEach((opt, optIdx) => {
@@ -1024,7 +1099,9 @@
             }
 
             html += `
-            <div class="option-item ${extraClasses}" data-value="${escapeHtml(opt)}" data-letter="${label}">
+            <div class="option-item ${extraClasses}" data-value="${escapeHtml(opt)}" data-letter="${label}"
+                 role="radio" tabindex="0" aria-checked="${isChecked ? 'true' : 'false'}"
+                 aria-label="${label}: ${escapeHtml(opt)}">
                 <div class="option-letter-badge">${label}</div>
                 <div class="option-text">${escapeHtml(opt)}</div>
                 ${!isReviewMode ? `<button class="btn-strike-option" title="Gạch bỏ loại trừ" onclick="event.stopPropagation(); toggleEliminateOption('${escapeHtml(opt)}');"><i class="fa-solid fa-ban"></i></button>` : ''}
@@ -1043,6 +1120,12 @@
                 card.addEventListener('click', () => {
                     const val = card.getAttribute('data-value');
                     selectAnswer(val);
+                });
+                card.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        selectAnswer(card.getAttribute('data-value'));
+                    }
                 });
             });
         }
@@ -1068,6 +1151,10 @@
         playSound('select');
         renderPalette();
         renderCurrentQuestion();
+        requestAnimationFrame(() => {
+            const selectedCard = dynamicQuestionDiv.querySelector('.option-item.selected');
+            if (selectedCard) selectedCard.focus({preventScroll: true});
+        });
         saveToLocalStorage();
     }
 
@@ -1153,6 +1240,7 @@
         const startBtn = document.getElementById('startExamBtn');
 
         let name = nameInput.value.trim();
+        let quizId = EXAM_ID ? "" : (((document.getElementById('quizSelect') || {}).value) || "");
         errorDiv.innerText = "";
 
         // --- Chế độ ?exam=<id>: bắt buộc đăng nhập, lấy họ tên từ tài khoản ---
@@ -1165,7 +1253,8 @@
                     errorDiv.innerText = "❌ Bạn cần đăng nhập bằng tài khoản học sinh để làm bài thi này!";
                     startBtn.disabled = false;
                     startBtn.innerHTML = '<span>VÀO PHÒNG THI & BẮT ĐẦU</span> <i class="fa-solid fa-bolt-lightning"></i>';
-                    setTimeout(() => { location.href = '/portal'; }, 1500);
+                    // mở cổng lớp học ngay trong trang để đăng nhập, không nhảy trang
+                    openPortalDrawer();
                     return;
                 }
                 const me = await meRes.json();
@@ -1189,6 +1278,14 @@
             return;
         }
 
+        if (!EXAM_ID && !quizId) {
+            errorDiv.innerText = "❌ Vui lòng chọn bộ đề bạn muốn làm!";
+            showToast("Hãy chọn một bộ đề trước khi bắt đầu!", "fa-circle-exclamation");
+            const sel = document.getElementById('quizSelect');
+            if (sel) sel.focus();
+            return;
+        }
+
         startBtn.disabled = true;
         startBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Đang khởi tạo đề thi chuẩn...</span>';
 
@@ -1208,13 +1305,13 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'same-origin',
-                body: JSON.stringify(EXAM_ID ? {} : { name: name })
+                body: JSON.stringify(EXAM_ID ? {} : { name: name, quiz_id: quizId })
             });
 
             const data = await res.json();
             if (res.ok) {
                 currentQuestions = data.questions || [];
-                if (!currentQuestions.length || (!EXAM_ID && currentQuestions.length !== 40)) throw new Error('Invalid exam payload');
+                if (!currentQuestions.length) throw new Error('Invalid exam payload');
                 userAnswers = new Array(currentQuestions.length).fill(null);
                 sessionId = data.session_id;
                 startTimeISO = data.start_time;
@@ -1288,11 +1385,18 @@
     }
 
     async function executeSubmitExam() {
+        if (isSubmitting) return;
         confirmSubmitModal.style.display = 'none';
         if (!sessionId) {
-            alert("Lỗi: Phiên thi không hợp lệ!");
+            showToast("Phiên thi không hợp lệ. Vui lòng tải lại trang.", "fa-triangle-exclamation");
             return;
         }
+        isSubmitting = true;
+        const confirmButton = document.getElementById('confirmSubmitBtn');
+        const originalConfirmLabel = confirmButton.innerHTML;
+        confirmButton.disabled = true;
+        confirmButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang nộp bài...';
+        submitBtn.disabled = true;
         if (timerInterval) clearInterval(timerInterval);
 
         const sanitizedAnswers = userAnswers.map(ans => ans || "");
@@ -1320,10 +1424,20 @@
                 showResultModal(data);
                 loadLeaderboard();
             } else {
-                alert("Lỗi: " + (data.error || "Không thể nộp bài!"));
+                showToast(data.error || "Không thể nộp bài. Vui lòng thử lại.", "fa-triangle-exclamation");
+                isSubmitting = false;
+                confirmButton.disabled = false;
+                confirmButton.innerHTML = originalConfirmLabel;
+                submitBtn.disabled = false;
+                startTimer();
             }
         } catch (err) {
-            alert("Lỗi kết nối máy chủ khi nộp bài!");
+            showToast("Không kết nối được máy chủ. Bài làm vẫn được lưu trên thiết bị.", "fa-wifi");
+            isSubmitting = false;
+            confirmButton.disabled = false;
+            confirmButton.innerHTML = originalConfirmLabel;
+            submitBtn.disabled = false;
+            startTimer();
         }
     }
 
@@ -1601,6 +1715,7 @@
         if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
 
         if (e.key === 'Escape') {
+            if (portalIsOpen()) { closePortalDrawer(); return; }
             closeLightbox();
             shortcutsModal.style.display = 'none';
             confirmSubmitModal.style.display = 'none';
@@ -1637,33 +1752,251 @@
         }
     });
 
+    // --- Chọn bộ đề ---
+    async function loadQuizOptions() {
+        const sel = document.getElementById('quizSelect');
+        if (!sel) return;
+        try {
+            const res = await fetch('/quizzes');
+            const data = await res.json();
+            const quizzes = data.quizzes || [];
+            if (!quizzes.length) {
+                sel.innerHTML = '<option value="">Chưa có bộ đề nào - vào /admin để tạo</option>';
+                document.getElementById('quizSelectHint').innerHTML = '<i class="fa-solid fa-circle-info"></i> Chưa có bộ đề. Quản trị viên cần tạo đề trước khi mở phòng thi.';
+                return;
+            }
+            sel.innerHTML = '<option value="">-- Chọn bộ đề --</option>' + quizzes.map((q) => {
+                const label = (q.subject ? '[' + q.subject + '] ' : '') + q.title + ' (' + q.question_count + ' câu)';
+                return '<option value="' + escapeHtml(q.id) + '">' + escapeHtml(label) + '</option>';
+            }).join('');
+            sel.addEventListener('change', () => {
+                const selected = quizzes.find(q => q.id === sel.value);
+                document.getElementById('quizSelectHint').innerHTML = selected
+                    ? `<i class="fa-solid fa-circle-check"></i> ${escapeHtml(String(selected.question_count))} câu hỏi · sẵn sàng bắt đầu.`
+                    : '<i class="fa-solid fa-circle-info"></i> Chọn bộ đề để xem đúng số câu và thời lượng trước khi bắt đầu.';
+                document.getElementById('loginError').innerText = '';
+            });
+        } catch (e) {
+            sel.innerHTML = '<option value="">Không tải được danh sách bộ đề</option>';
+            document.getElementById('quizSelectHint').innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Không tải được bộ đề. Kiểm tra kết nối rồi thử lại.';
+        }
+    }
+
+    /* ======================================================================
+       CỔNG LỚP HỌC TRONG TRANG (drawer) - không bắt người dùng rời trang
+       ====================================================================== */
+    const portalDrawer = document.getElementById('portalDrawer');
+    const portalBackdrop = document.getElementById('portalBackdrop');
+    const portalFrame = document.getElementById('portalFrame');
+    const portalLoading = document.getElementById('portalLoading');
+    const portalCloseBtn = document.getElementById('portalCloseBtn');
+    let portalFrameLoaded = false;
+    let portalCloseTimer = null;
+    let portalLastFocus = null;
+
+    function portalIsOpen() {
+        return !!(portalDrawer && portalDrawer.classList.contains('open'));
+    }
+
+    function portalPanelUrl(panel) {
+        const u = new URL(location.href);
+        if (panel) u.searchParams.set('panel', panel);
+        else u.searchParams.delete('panel');
+        const qs = u.searchParams.toString();
+        return u.pathname + (qs ? '?' + qs : '');
+    }
+
+    function openPortalDrawer(options = {}) {
+        if (!portalDrawer) return;
+        if (portalCloseTimer) { clearTimeout(portalCloseTimer); portalCloseTimer = null; }
+        if (!portalFrameLoaded) {
+            portalFrameLoaded = true;
+            portalFrame.addEventListener('load', () => portalLoading.classList.add('hidden'));
+            portalFrame.src = '/portal';
+        }
+        if (!portalIsOpen()) {
+            portalLastFocus = document.activeElement;
+            portalDrawer.hidden = false;
+            portalBackdrop.hidden = false;
+            portalDrawer.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('no-scroll');
+            void portalDrawer.offsetWidth; // ép reflow để transition trượt chạy
+            portalDrawer.classList.add('open');
+            portalBackdrop.classList.add('open');
+            portalBroadcastTheme();
+            setTimeout(() => {
+                try { portalCloseBtn.focus({preventScroll: true}); } catch (e) {}
+            }, 80);
+        }
+        if (options.push !== false) {
+            try { history.pushState({ olympiaPanel: 'account' }, '', portalPanelUrl('account')); } catch (e) {}
+        }
+    }
+
+    function closePortalDrawer(options = {}) {
+        if (!portalIsOpen()) return;
+        portalDrawer.classList.remove('open');
+        portalBackdrop.classList.remove('open');
+        portalDrawer.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('no-scroll');
+        const cameFromHistory = !!(history.state && history.state.olympiaPanel);
+        portalCloseTimer = setTimeout(() => {
+            portalDrawer.hidden = true;
+            portalBackdrop.hidden = true;
+            portalCloseTimer = null;
+        }, 320);
+        if (portalLastFocus && portalLastFocus.focus) {
+            try { portalLastFocus.focus({preventScroll: true}); } catch (e) {}
+        }
+        if (options.back !== false && cameFromHistory) {
+            try { history.back(); } catch (e) {}
+        }
+    }
+
+    // Vào bằng /?panel=account (hoặc F5 khi drawer đang mở) -> mở lại drawer
+    function initPortalPanelFromUrl() {
+        if (!portalDrawer) return;
+        if (new URLSearchParams(location.search).get('panel') !== 'account') return;
+        try { history.replaceState({ olympiaPanel: 'account' }, '', location.href); } catch (e) {}
+        openPortalDrawer({push: false});
+    }
+
+    function portalBroadcastTheme() {
+        const theme = document.documentElement.getAttribute('data-theme') || 'light';
+        try {
+            portalFrame.contentWindow.postMessage(
+                {source: 'olympia-host', type: 'theme', theme: theme}, location.origin);
+        } catch (e) {}
+    }
+
+    document.querySelectorAll('[data-open-portal]').forEach((el) => {
+        el.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (portalIsOpen()) closePortalDrawer(); else openPortalDrawer();
+        });
+    });
+    portalCloseBtn.addEventListener('click', () => closePortalDrawer());
+    portalBackdrop.addEventListener('click', () => closePortalDrawer());
+    window.addEventListener('popstate', () => {
+        if (new URLSearchParams(location.search).get('panel') === 'account') openPortalDrawer({push: false});
+        else closePortalDrawer({back: false});
+    });
+    window.addEventListener('message', (e) => {
+        if (e.origin !== location.origin || !e.data || e.data.source !== 'olympia-portal') return;
+        if (e.data.type === 'start-exam' && e.data.examId) {
+            // đóng drawer nhưng KHÔNG history.back() - URL sắp được đổi sang /?exam=<id>
+            closePortalDrawer({back: false});
+            startExamFromAccount(e.data.examId);
+        } else if (e.data.type === 'auth') {
+            updatePortalNavLabel(e.data.user);
+        } else if (e.data.type === 'close') {
+            closePortalDrawer();
+        }
+    });
+
+    // Hiện tên tài khoản ngay trên thanh điều hướng (không cần mở trang /portal)
+    function updatePortalNavLabel(user) {
+        const label = document.getElementById('portalNavLabel');
+        const btn = document.getElementById('portalToggleBtn');
+        if (!label) return;
+        if (user && user.name) {
+            const short = String(user.name).trim().split(/\s+/).slice(-1)[0];
+            label.textContent = short;
+            if (btn) btn.title = `${user.name} (${user.role === 'teacher' ? 'Giáo viên' : 'Học sinh'}) - mở cổng lớp học`;
+        } else {
+            label.textContent = 'Tài khoản';
+            if (btn) btn.title = 'Cổng lớp học: đăng nhập / đăng ký tài khoản học sinh - giáo viên';
+        }
+    }
+
+    fetch('/api/auth/me', { credentials: 'same-origin' })
+        .then(r => (r.ok ? r.json() : null))
+        .then(me => updatePortalNavLabel(me && me.user))
+        .catch(() => {});
+
+    /* --- Chế độ thi theo đề được gán: bật/tắt ngay trong trang --- */
+    let heroSubtitleDefault = null;
+
+    function applyExamMode() {
+        const nameLabel = document.querySelector('label[for="fullname"]');
+        const nameBox = document.getElementById('fullname');
+        if (nameLabel) nameLabel.innerText = 'Bạn thi với tài khoản:';
+        if (nameBox) {
+            nameBox.placeholder = 'Đang tải tài khoản...';
+            nameBox.readOnly = true;
+            fetch('/api/auth/me', { credentials: 'same-origin' })
+                .then(r => (r.ok ? r.json() : null))
+                .then(me => {
+                    if (me && me.user) {
+                        nameBox.value = me.user.name;
+                        nameBox.placeholder = 'Tài khoản đã đăng nhập';
+                    } else {
+                        nameBox.placeholder = 'Cần đăng nhập để làm bài...';
+                    }
+                }).catch(() => {});
+        }
+        const heroSub = document.querySelector('.hero-subtitle');
+        if (heroSub) {
+            if (heroSubtitleDefault === null) heroSubtitleDefault = heroSub.innerText;
+            heroSub.innerText = 'Bài thi được giáo viên gán cho lớp của bạn - đăng nhập để bắt đầu.';
+        }
+        const quizGroup = document.getElementById('quizSelectGroup');
+        if (quizGroup) quizGroup.style.display = 'none';
+    }
+
+    // Bấm "Vào phòng thi" trong drawer -> thi ngay tại trang này (không chuyển trang)
+    function startExamFromAccount(examId) {
+        EXAM_ID = examId;
+        try {
+            const u = new URL(location.href);
+            u.searchParams.set('exam', examId);
+            u.searchParams.delete('panel');
+            const qs = u.searchParams.toString();
+            history.replaceState({}, '', u.pathname + (qs ? '?' + qs : ''));
+        } catch (e) {}
+        applyExamMode();
+        showToast("Đang vào phòng thi theo đề của lớp...", "fa-graduation-cap");
+        startTest();
+    }
+
+    // Rời chế độ thi theo đề, trở về trang chủ KHÔNG tải lại trang
+    function resetToHomeMode() {
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        EXAM_ID = null;
+        try { history.replaceState({}, '', '/'); } catch (e) {}
+        examContainer.style.display = 'none';
+        loginCard.style.display = '';
+        const nameLabel = document.querySelector('label[for="fullname"]');
+        if (nameLabel) nameLabel.innerText = 'Họ và tên thí sinh:';
+        const nameBox = document.getElementById('fullname');
+        if (nameBox) {
+            nameBox.readOnly = false;
+            nameBox.placeholder = 'Nhập họ và tên đầy đủ...';
+            nameBox.value = getLastSubmittedName() || '';
+        }
+        const heroSub = document.querySelector('.hero-subtitle');
+        if (heroSub && heroSubtitleDefault !== null) heroSub.innerText = heroSubtitleDefault;
+        const quizGroup = document.getElementById('quizSelectGroup');
+        if (quizGroup) quizGroup.style.display = '';
+        const startBtn = document.getElementById('startExamBtn');
+        if (startBtn) {
+            startBtn.disabled = false;
+            startBtn.innerHTML = '<span>VÀO PHÒNG THI & BẮT ĐẦU</span> <i class="fa-solid fa-bolt-lightning"></i>';
+        }
+        clearLocalStorage();
+        loadQuizOptions();
+    }
+
     // --- Init App ---
     async function init() {
         const prevName = getLastSubmittedName();
         if (prevName) document.getElementById('fullname').value = prevName;
 
         // Chế độ ?exam=<id>: đổi nhãn ô nhập, tự điền tên từ tài khoản (chỉ đọc)
-        if (EXAM_ID) {
-            const nameLabel = document.querySelector('label[for="fullname"]');
-            const nameBox = document.getElementById('fullname');
-            if (nameLabel) nameLabel.innerText = 'Bạn thi với tài khoản:';
-            if (nameBox) {
-                nameBox.placeholder = 'Đang tải tài khoản...';
-                nameBox.readOnly = true;
-                fetch('/api/auth/me', { credentials: 'same-origin' })
-                    .then(r => (r.ok ? r.json() : null))
-                    .then(me => {
-                        if (me && me.user) {
-                            nameBox.value = me.user.name;
-                            nameBox.placeholder = 'Tài khoản đã đăng nhập';
-                        } else {
-                            nameBox.placeholder = 'Cần đăng nhập để làm bài...';
-                        }
-                    }).catch(() => {});
-            }
-            const heroSub = document.querySelector('.hero-subtitle');
-            if (heroSub) heroSub.innerText = 'Bài thi được giáo viên gán cho lớp của bạn - đăng nhập để bắt đầu.';
-        }
+        if (EXAM_ID) applyExamMode();
+
+        // Mở sẵn cổng lớp học nếu người dùng vào bằng /?panel=account
+        initPortalPanelFromUrl();
 
         // Theme initialization
         const savedTheme = localStorage.getItem('olympiaTheme') || 'light';
@@ -1677,6 +2010,7 @@
             document.documentElement.setAttribute('data-theme', next);
             localStorage.setItem('olympiaTheme', next);
             themeBtn.innerHTML = (next === 'dark') ? '<i class="fa-solid fa-sun" style="color:#fbbf24;"></i>' : '<i class="fa-solid fa-moon"></i>';
+            portalBroadcastTheme();
             showToast(next === 'dark' ? "Đã bật chế độ Cyber Dark!" : "Đã chuyển về Clean Light!");
         };
 
@@ -1731,9 +2065,14 @@
 
         // Palette Filter chips
         document.querySelectorAll('.filter-chip').forEach(chip => {
+            chip.setAttribute('aria-pressed', chip.classList.contains('active') ? 'true' : 'false');
             chip.addEventListener('click', () => {
-                document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('.filter-chip').forEach(c => {
+                    c.classList.remove('active');
+                    c.setAttribute('aria-pressed', 'false');
+                });
                 chip.classList.add('active');
+                chip.setAttribute('aria-pressed', 'true');
                 currentFilter = chip.getAttribute('data-filter');
                 renderPalette();
             });
@@ -1788,6 +2127,7 @@
         document.getElementById('refreshLeaderboardBtn').onclick = loadLeaderboard;
 
         // Load initial data
+        if (!EXAM_ID) loadQuizOptions();
         loadLeaderboard();
 
         // Check for resumable exam

@@ -34,12 +34,14 @@ def _set_cookie(response, token):
 
 
 def _cls_with_role(cls, user):
-    """Kèm vai trò của user trong lớp (nếu là thành viên)."""
+    """Kèm vai trò + quyền của user trong lớp (nếu là thành viên)."""
     member = store.member_of(cls, user["id"]) if user else None
     out = store.class_with_names(cls)
     out["my_role"] = member.get("role") if member else None
+    out["my_role_label"] = store.role_label(cls, member.get("role")) if member else None
     out["my_team_id"] = member.get("team_id") if member else None
     out["is_teacher"] = cls.get("teacher_id") == (user or {}).get("id")
+    out["permissions"] = sorted(store.permissions_of(cls, (user or {}).get("id")))
     return out
 
 
@@ -47,6 +49,8 @@ def _public_exam(exam, include_questions=False):
     out = {
         "id": exam["id"],
         "title": exam.get("title"),
+        "subject": exam.get("subject"),
+        "quiz_id": exam.get("quiz_id"),
         "duration_minutes": exam.get("duration_minutes"),
         "question_count": len(exam.get("questions") or []),
         "class_ids": exam.get("class_ids") or [],
@@ -76,6 +80,24 @@ def _require_class_owner(request, class_id):
     if cls.get("teacher_id") != user["id"]:
         return None, _err(403, "Chỉ giáo viên chủ nhiệm mới thực hiện được.")
     return user, None
+
+
+def _require_class_permission(request, class_id, permission):
+    """Trả về (user, cls, tập quyền) nếu có quyền; ngược lại (None, None, response lỗi).
+
+    Giáo viên chủ nhiệm luôn có mọi quyền nên không cần trường hợp riêng.
+    """
+    user = _me(request)
+    if not user:
+        return None, None, _err(401, "Bạn chưa đăng nhập.")
+    cls = store.get_class(class_id)
+    if not cls:
+        return None, None, _err(404, "Không tìm thấy lớp.")
+    perms = store.permissions_of(cls, user["id"])
+    if permission not in perms:
+        return None, None, _err(403, "Bạn không có quyền này trong lớp: " +
+                               store.PERMISSIONS.get(permission, permission))
+    return user, cls, perms
 
 
 def _require_exam_owner(request, exam_id):
@@ -185,10 +207,10 @@ async def class_detail(request: Request, class_id: str):
 
 @router.post("/classes/{class_id}/teams")
 async def create_team(request: Request, class_id: str, payload: dict):
-    user, error = _require_class_owner(request, class_id)
-    if error:
+    user, cls, error = _require_class_permission(request, class_id, "manage_teams")
+    if cls is None:
         return error
-    team, error = store.add_team(class_id, payload.get("name"), user["id"])
+    team, error = store.add_team(class_id, payload.get("name"))
     if error:
         return _err(400, error)
     return {"team": team}
@@ -196,10 +218,10 @@ async def create_team(request: Request, class_id: str, payload: dict):
 
 @router.delete("/classes/{class_id}/teams/{team_id}")
 async def delete_team(request: Request, class_id: str, team_id: str):
-    user, error = _require_class_owner(request, class_id)
-    if error:
+    user, cls, error = _require_class_permission(request, class_id, "manage_teams")
+    if cls is None:
         return error
-    cls, error = store.remove_team(class_id, team_id, user["id"])
+    cls, error = store.remove_team(class_id, team_id)
     if error:
         return _err(400, error)
     return {"class": _cls_with_role(cls, user)}
@@ -207,10 +229,14 @@ async def delete_team(request: Request, class_id: str, team_id: str):
 
 @router.patch("/classes/{class_id}/members/{user_id}")
 async def update_member(request: Request, class_id: str, user_id: str, payload: dict):
-    user, error = _require_class_owner(request, class_id)
-    if error:
+    user, cls, error = _require_class_permission(request, class_id, "assign_roles")
+    if cls is None:
         return error
     role = payload.get("role")
+    is_owner = cls.get("teacher_id") == user["id"]
+    # Lớp trưởng / lớp phó chỉ do giáo viên chủ nhiệm tự cấp để tránh leo quyền.
+    if role in store.MONITOR_ROLES and not is_owner:
+        return _err(403, "Chỉ giáo viên chủ nhiệm mới cấp được vai trò lớp trưởng / lớp phó.")
     team_id = payload.get("team_id", "__absent__")
     if team_id == "__absent__":
         team_id = None
@@ -218,7 +244,7 @@ async def update_member(request: Request, class_id: str, user_id: str, payload: 
     else:
         apply_team = True
     cls, error = store.set_member(
-        class_id, user["id"], user_id,
+        class_id, user_id,
         role=role if role is not None else None,
         team_id=team_id if apply_team else None,
     )
@@ -233,6 +259,97 @@ async def delete_member(request: Request, class_id: str, user_id: str):
     if error:
         return error
     cls, error = store.remove_member(class_id, user["id"], user_id)
+    if error:
+        return _err(400, error)
+    return {"class": _cls_with_role(cls, user)}
+
+
+# ------------------------------------------------------------------ vai trò & phân quyền
+@router.get("/classes/{class_id}/roles")
+async def class_roles(request: Request, class_id: str):
+    """Danh mục quyền + vai trò có sẵn + vai trò tự tạo (chỉ người phân quyền được xem)."""
+    user, cls, perms = _require_class_permission(request, class_id, "assign_roles")
+    if cls is None:
+        return perms
+    return {"class_id": class_id, "permissions_of_me": sorted(perms),
+            **store.role_catalog(cls)}
+
+
+@router.post("/classes/{class_id}/roles")
+async def create_custom_role(request: Request, class_id: str, payload: dict):
+    user, error = _require_class_owner(request, class_id)
+    if error:
+        return error
+    role, error = store.create_role(class_id, user["id"], payload.get("name"),
+                                    payload.get("permissions"))
+    if error:
+        return _err(400, error)
+    return {"role": role}
+
+
+@router.patch("/classes/{class_id}/roles/{role_id}")
+async def update_custom_role(request: Request, class_id: str, role_id: str, payload: dict):
+    user, error = _require_class_owner(request, class_id)
+    if error:
+        return error
+    if "name" in payload and "permissions" not in payload:
+        role, error = store.update_role(class_id, user["id"], role_id, name=payload.get("name"))
+    elif "permissions" in payload and "name" not in payload:
+        role, error = store.update_role(class_id, user["id"], role_id,
+                                        permissions=payload.get("permissions"))
+    else:
+        role, error = store.update_role(class_id, user["id"], role_id,
+                                        name=payload.get("name"),
+                                        permissions=payload.get("permissions"))
+    if error:
+        return _err(400, error)
+    return {"role": role}
+
+
+@router.delete("/classes/{class_id}/roles/{role_id}")
+async def delete_custom_role(request: Request, class_id: str, role_id: str):
+    user, error = _require_class_owner(request, class_id)
+    if error:
+        return error
+    result, error = store.delete_role(class_id, user["id"], role_id)
+    if error:
+        return _err(400, error)
+    return {"message": "ok", **result}
+
+
+# ------------------------------------------------------------------ quản lý lớp
+@router.patch("/classes/{class_id}")
+async def edit_class(request: Request, class_id: str, payload: dict):
+    user, error = _require_class_owner(request, class_id)
+    if error:
+        return error
+    cls, error = store.update_class(
+        class_id, user["id"],
+        name=payload.get("name") if "name" in payload else None,
+        grade=payload.get("grade") if "grade" in payload else None,
+    )
+    if error:
+        return _err(400, error)
+    return {"class": _cls_with_role(cls, user)}
+
+
+@router.delete("/classes/{class_id}")
+async def remove_class(request: Request, class_id: str):
+    user, error = _require_class_owner(request, class_id)
+    if error:
+        return error
+    _, error = store.delete_class(class_id, user["id"])
+    if error:
+        return _err(400, error)
+    return {"message": "ok"}
+
+
+@router.post("/classes/{class_id}/regen-code")
+async def regenerate_join_code(request: Request, class_id: str):
+    user, error = _require_class_owner(request, class_id)
+    if error:
+        return error
+    cls, error = store.regen_join_code(class_id, user["id"])
     if error:
         return _err(400, error)
     return {"class": _cls_with_role(cls, user)}
@@ -258,9 +375,11 @@ async def list_exams(request: Request):
 
 
 @router.post("/exams")
-async def create_exam(request: Request, title: str = Form(...),
+async def create_exam(request: Request, title: str = Form(""),
+                      subject: str = Form(""),
                       duration_minutes: int = Form(60),
                       class_ids: str = Form(""),
+                      quiz_id: str = Form(""),
                       file: UploadFile = File(None)):
     user = _me(request)
     if not user:
@@ -271,7 +390,21 @@ async def create_exam(request: Request, title: str = Form(...),
 
     source_text = ""
     filename = ""
-    if file is not None and file.filename:
+    questions = None
+
+    # Ưu tiên dùng lại một bộ đề đã có trong kho chung (nhiều môn).
+    if quiz_id.strip():
+        quiz = store.get_quiz(quiz_id.strip())
+        if not quiz:
+            return _err(404, "Không tìm thấy bộ đề trong kho.")
+        if not quiz.get("questions"):
+            return _err(400, "Bộ đề này chưa có câu hỏi.")
+        questions = quiz["questions"]
+        source_text = quiz.get("source_text") or ""
+        filename = quiz.get("filename") or ""
+        subject = subject.strip() or (quiz.get("subject") or "")
+        title = title.strip() or quiz.get("title") or "Đề thi"
+    elif file is not None and file.filename:
         data = await file.read()
         if len(data) > 5 * 1024 * 1024:
             return _err(413, "File quá lớn (tối đa 5MB).")
@@ -282,17 +415,17 @@ async def create_exam(request: Request, title: str = Form(...),
         if len(source_text.strip()) < 200:
             return _err(400, "Không trích được nội dung đủ dài từ tài liệu (cần ít nhất 200 ký tự).")
         filename = file.filename
-    if not source_text.strip():
-        return _err(400, "Cần tải lên tài liệu (.pdf/.docx/.txt) để AI sinh câu hỏi.")
-
-    try:
-        questions = await asyncio.to_thread(generate_questions, source_text)
-    except AIError as e:
-        return _err(502, str(e))
+        try:
+            questions = await asyncio.to_thread(generate_questions, source_text)
+        except AIError as e:
+            return _err(502, str(e))
+    else:
+        return _err(400, "Cần tải lên tài liệu hoặc chọn một bộ đề có sẵn trong kho.")
 
     exam, error = store.create_exam(
         user["id"], title, duration_minutes=duration_minutes,
         questions=questions, source_text=source_text, filename=filename,
+        subject=subject, quiz_id=quiz_id.strip() or None,
     )
     if error:
         return _err(400, error)
@@ -511,14 +644,25 @@ async def submit_attempt(request: Request, payload: dict):
 
 # ------------------------------------------------------------------ điểm số
 def _allowed_result_class(user, cls):
+    """Trả về (phạm_vũ, ghi_chú, tập_quyền); phạm_vũ None nghĩa là không có quyền xem.
+
+    - "teacher": giáo viên chủ nhiệm, xem toàn bộ.
+    - "class_monitor": có quyền xem bảng điểm cả lớp.
+    - "team_leader": chỉ xem được bảng điểm của tổ mình.
+    """
+    perms = store.permissions_of(cls, user["id"])
     if cls.get("teacher_id") == user["id"]:
-        return "teacher"
-    member = store.member_of(cls, user["id"])
-    if member and member.get("role") == "class_monitor":
-        return "class_monitor"
-    if member and member.get("role") == "team_leader":
-        return "team_leader"
-    return None
+        return "teacher", None, perms
+    if "view_class_results" in perms:
+        return "class_monitor", None, perms
+    if "view_team_results" in perms:
+        member = store.member_of(cls, user["id"])
+        team_id = (member or {}).get("team_id")
+        if not team_id:
+            return None, None, perms
+        team = next((t for t in cls.get("teams") or [] if t.get("id") == team_id), None)
+        return "team_leader", f"Chỉ hiển thị tổ: {team.get('name') if team else '?'}", perms
+    return None, None, perms
 
 
 @router.get("/exams/{exam_id}/results")
@@ -547,30 +691,34 @@ async def class_results(request: Request, class_id: str):
     cls = store.get_class(class_id)
     if not cls:
         return _err(404, "Không tìm thấy lớp.")
-    access = _allowed_result_class(user, cls)
+    access, scope_note, perms = _allowed_result_class(user, cls)
     if not access:
+        member = store.member_of(cls, user["id"])
+        if member and "view_team_results" in perms:
+            return _err(403, "Bạn chưa được xếp vào tổ nào nên chưa xem được bảng điểm tổ.")
         return _err(403, "Bạn không có quyền xem bảng điểm của lớp này.")
 
-    member_ids = [m["user_id"] for m in cls.get("members", [])]
-    scope_note = None
+    member_ids = [m["user_id"] for m in cls.get("members") or []]
     if access == "team_leader":
         my = store.member_of(cls, user["id"])
         team_id = (my or {}).get("team_id")
-        if not team_id:
-            return _err(403, "Bạn chưa được xếp vào tổ nào nên chưa xem được bảng điểm tổ.")
-        member_ids = [m["user_id"] for m in cls.get("members", [])
+        member_ids = [m["user_id"] for m in cls.get("members") or []
                       if m.get("team_id") == team_id]
-        team = next((t for t in cls.get("teams", []) if t.get("id") == team_id), None)
-        scope_note = f"Chỉ hiển thị tổ: {team.get('name') if team else '?'}"
+
+    my_member = store.member_of(cls, user["id"])
+    access_label = ("Giáo viên chủ nhiệm" if access == "teacher"
+                    else store.role_label(cls, (my_member or {}).get("role")) or "Thành viên")
 
     exams = [e for e in store.exams_of_teacher(cls.get("teacher_id"))
              if class_id in (e.get("class_ids") or [])]
     attempts = store.attempts_in_classes([e["id"] for e in exams], member_ids)
 
-    accounts = {a["id"]: a for a in store._read(store.ACCOUNTS_FILE, {}).values()}
-    teams = {t["id"]: t.get("name") for t in cls.get("teams", [])}
-    member_team = {m["user_id"]: m.get("team_id") for m in cls.get("members", [])}
-    member_role = {m["user_id"]: m.get("role") for m in cls.get("members", [])}
+    accounts = {a["id"]: a for a in store.all_accounts()}
+    teams = {t["id"]: t.get("name") for t in cls.get("teams") or []}
+    member_team = {m["user_id"]: m.get("team_id") for m in cls.get("members") or []}
+    member_role = {m["user_id"]: m.get("role") for m in cls.get("members") or []}
+    member_role_label = {m["user_id"]: store.role_label(cls, m.get("role"))
+                         for m in cls.get("members") or []}
 
     rows = []
     for m_id in member_ids:
@@ -581,6 +729,7 @@ async def class_results(request: Request, class_id: str):
             "user_id": m_id,
             "name": acc.get("name", "???"),
             "role": member_role.get(m_id),
+            "role_label": member_role_label.get(m_id) or "Học sinh",
             "team": teams.get(member_team.get(m_id)) or "-",
             "attempts": len(mine),
             "best_score": best,
@@ -590,6 +739,8 @@ async def class_results(request: Request, class_id: str):
     return {
         "class": {"id": cls["id"], "name": cls["name"], "grade": cls.get("grade")},
         "access": access,
+        "access_label": access_label,
+        "permissions": sorted(perms),
         "note": scope_note,
         "exams": [_public_exam(e) for e in exams],
         "attempts": [{k: a[k] for k in ("user_id", "user_name", "exam_title", "score",

@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản trị - Tạo đề thi từ tài liệu (AI)</title>
+    <title>Quản trị - Kho bộ đề & Tạo đề thi (AI)</title>
     <link rel="stylesheet" href="/style.css">
     <style>
-        body { max-width: 780px; margin: 40px auto; padding: 0 16px; }
+        body { max-width: 820px; margin: 40px auto; padding: 0 16px; }
         .admin-card {
             background: var(--bg-card, #fff); border: 1px solid var(--border-color, #e5e7eb);
             border-radius: 16px; padding: 24px; margin-bottom: 20px;
@@ -37,11 +37,28 @@
         .top-links { display: flex; gap: 12px; margin-bottom: 18px; font-size: .9rem; }
         .top-links a { color: #4f46e5; text-decoration: none; font-weight: 700; }
         .mode-desc { font-size: .82rem; color: var(--text-muted, #6b7280); margin-top: 6px; }
+        .quiz-row {
+            display: flex; align-items: center; gap: 12px; padding: 12px;
+            border: 1px solid var(--border-color, #e5e7eb); border-radius: 12px;
+            margin-top: 10px; background: var(--bg-card-sub, #f8fafc);
+        }
+        .quiz-row .quiz-meta { flex: 1; min-width: 0; }
+        .quiz-row .quiz-title { font-weight: 800; }
+        .quiz-row .quiz-sub { font-size: .82rem; color: var(--text-muted, #6b7280); margin-top: 3px; }
+        .quiz-badge { display: inline-block; font-size: .72rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+        .quiz-badge.subject { background: #eef2ff; color: #4338ca; }
+        .quiz-badge.random { background: #fef3c7; color: #b45309; }
+        .quiz-actions { display: flex; gap: 8px; flex-shrink: 0; }
+        .mini-btn { border: 1px solid var(--border-color, #e5e7eb); background: #fff; color: inherit;
+            border-radius: 9px; padding: 7px 10px; font-size: .82rem; font-weight: 700; cursor: pointer; }
+        .mini-btn.danger { color: #b91c1c; border-color: #fecaca; }
+        .mini-btn:disabled { opacity: .5; cursor: not-allowed; }
     </style>
 </head>
 <body>
     <div class="top-links">
         <a href="/">&#8592; Về trang thi</a>
+        <a href="/portal">Cổng lớp học</a>
     </div>
 
     <div class="admin-card">
@@ -64,10 +81,16 @@
     </div>
 
     <div class="admin-card">
-        <h2>&#128218; Tạo đề thi từ tài liệu (Word / PDF / Text)</h2>
-        <p class="hint">Tải tài liệu lên, AI sẽ trích nội dung và sinh bộ 40 câu trắc nghiệm. Không dùng bộ đề có sẵn.</p>
+        <h2>&#128218; Tạo bộ đề mới từ tài liệu (Word / PDF / Text)</h2>
+        <p class="hint">Mỗi lần tải lên sẽ tạo thêm MỘT bộ đề trong kho. Học sinh vào trang thi sẽ chọn bộ đề muốn làm.</p>
 
         <form id="uploadForm">
+            <label class="admin-label" for="quizTitle">Tên bộ đề (để trống sẽ lấy theo tên file)</label>
+            <input class="admin-input" id="quizTitle" type="text" placeholder="VD: Đề ôn tập Toán 12 - Chương 1" maxlength="120">
+
+            <label class="admin-label" for="quizSubject">Môn / chủ đề</label>
+            <input class="admin-input" id="quizSubject" type="text" placeholder="VD: Toán" maxlength="60">
+
             <label class="admin-label" for="fileInput">File tài liệu (.pdf, .doc, .docx, .txt, .md - tối đa 5MB)</label>
             <input class="admin-input" type="file" id="fileInput" name="file" accept=".pdf,.doc,.docx,.txt,.md" required>
 
@@ -78,24 +101,23 @@
             </select>
             <div class="mode-desc">"Đề ngẫu nhiên" tốn token và chậm hơn mỗi lượt (~30-60s), chỉ dùng khi muốn mỗi thí sinh một đề.</div>
 
-            <button class="admin-btn" type="submit" id="uploadBtn">Tải lên &amp; tạo đề</button>
+            <button class="admin-btn" type="submit" id="uploadBtn">+ Tạo bộ đề mới</button>
         </form>
         <div class="admin-msg" id="uploadMsg"></div>
     </div>
 
     <div class="admin-card">
-        <h2>&#128200; Trạng thái</h2>
+        <h2>&#128200; Trạng thái &amp; Kho bộ đề</h2>
         <div class="status-grid" id="statusGrid"><span class="hint">Đang tải...</span></div>
-        <button class="admin-btn secondary" type="button" id="regenBtn" style="display:none;">Sinh lại bộ đề từ tài liệu này</button>
-        <div class="admin-msg" id="regenMsg"></div>
+        <div id="quizList"></div>
+        <div class="admin-msg" id="listMsg"></div>
     </div>
 
     <script>
         const uploadForm = document.getElementById('uploadForm');
         const uploadBtn = document.getElementById('uploadBtn');
         const uploadMsg = document.getElementById('uploadMsg');
-        const regenBtn = document.getElementById('regenBtn');
-        const regenMsg = document.getElementById('regenMsg');
+        const listMsg = document.getElementById('listMsg');
         const apiForm = document.getElementById('apiForm');
         const apiMsg = document.getElementById('apiMsg');
         const testApiBtn = document.getElementById('testApiBtn');
@@ -108,6 +130,10 @@
             return String(s == null ? '' : s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
         }
         function key() { return document.getElementById('adminKey').value; }
+        function fmtDate(iso) {
+            if (!iso) return '—';
+            try { return new Date(iso).toLocaleString('vi-VN'); } catch (e) { return iso; }
+        }
 
         apiForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -130,24 +156,76 @@
             finally { testApiBtn.disabled = false; testApiBtn.textContent = 'Test API và lưu'; }
         });
 
+        function renderQuizzes(quizzes) {
+            const box = document.getElementById('quizList');
+            if (!quizzes || !quizzes.length) {
+                box.innerHTML = '<p class="hint" style="margin-top:14px;">Kho bộ đề đang trống. Hãy tạo bộ đề đầu tiên.</p>';
+                return;
+            }
+            box.innerHTML = quizzes.map(q => {
+                const badges = [];
+                if (q.subject) badges.push(`<span class="quiz-badge subject">${esc(q.subject)}</span>`);
+                if (q.mode === 'random') badges.push('<span class="quiz-badge random">Sinh mỗi lượt</span>');
+                return `
+                    <div class="quiz-row">
+                        <div class="quiz-meta">
+                            <div class="quiz-title">${esc(q.title)} ${badges.join(' ')}</div>
+                            <div class="quiz-sub">${q.question_count} câu &middot; ${q.filename ? esc(q.filename) : 'không có file'} &middot; tạo ${esc(fmtDate(q.created_at))}</div>
+                        </div>
+                        <div class="quiz-actions">
+                            ${q.mode === 'shared' ? `<button class="mini-btn" data-regen="${esc(q.id)}">Sinh lại</button>` : ''}
+                            <button class="mini-btn danger" data-del="${esc(q.id)}" data-title="${esc(q.title)}">Xóa</button>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        document.getElementById('quizList').addEventListener('click', async (e) => {
+            const regenId = e.target.getAttribute('data-regen');
+            const delId = e.target.getAttribute('data-del');
+            if (regenId) {
+                e.target.disabled = true;
+                showMsg(listMsg, 'Đang sinh lại bộ đề... (30-60s)', true);
+                const fd = new FormData();
+                fd.append('quiz_id', regenId);
+                const k = key(); if (k) fd.append('admin_key', k);
+                try {
+                    const res = await fetch('/admin/generate', { method: 'POST', body: fd });
+                    const data = await res.json().catch(() => ({}));
+                    showMsg(listMsg, res.ok ? `Đã sinh lại ${data.questions} câu hỏi.` : (data.error || ('Lỗi ' + res.status)), res.ok);
+                } catch (err) { showMsg(listMsg, 'Lỗi kết nối: ' + err.message, false); }
+                loadStatus();
+            }
+            if (delId) {
+                if (!confirm('Xóa bộ đề này khỏi kho?')) return;
+                const params = new URLSearchParams();
+                const k = key(); if (k) params.set('admin_key', k);
+                try {
+                    const res = await fetch('/admin/quizzes/' + encodeURIComponent(delId) + (params.toString() ? '?' + params : ''), { method: 'DELETE' });
+                    const data = await res.json().catch(() => ({}));
+                    showMsg(listMsg, res.ok ? 'Đã xóa bộ đề.' : (data.error || ('Lỗi ' + res.status)), res.ok);
+                } catch (err) { showMsg(listMsg, 'Lỗi kết nối: ' + err.message, false); }
+                loadStatus();
+            }
+        });
+
         async function loadStatus() {
             try {
                 const res = await fetch('/admin/status');
                 const s = await res.json();
                 document.getElementById('adminKeyWrap').style.display = s.admin_protected ? 'block' : 'none';
-                const b = s.bank;
+                const quizzes = s.quizzes || [];
+                const totalQuestions = quizzes.reduce((sum, q) => sum + (q.question_count || 0), 0);
                 const cells = [
                     ['AI', s.ai_configured ? '<span class="badge-ok">Đã cấu hình</span>' : '<span class="badge-warn">Chưa cấu hình</span>'],
                     ['Model', esc(s.ai_model)],
-                    ['Tài liệu', b ? esc(b.filename) : 'Chưa có'],
-                    ['Chế độ', b ? esc(b.mode === 'random' ? 'Đề ngẫu nhiên/lượt' : 'Một đề chung') : '—'],
-                    ['Số câu đã sinh', b ? b.questions + ' / 40' : '0 / 40'],
-                    ['Ký tự tài liệu', b ? b.source_chars : 0],
-                    ['Thời điểm sinh', b && b.generated_at ? esc(b.generated_at) : '—']
+                    ['Số bộ đề', quizzes.length],
+                    ['Tổng câu hỏi', totalQuestions],
                 ];
                 document.getElementById('statusGrid').innerHTML = cells
                     .map(([k, v]) => `<div class="status-item"><b>${k}</b>${v}</div>`).join('');
-                regenBtn.style.display = (b && b.mode !== 'random') ? 'block' : 'none';
+                renderQuizzes(quizzes);
+                if (s.error) showMsg(listMsg, s.error, false);
             } catch (e) {
                 document.getElementById('statusGrid').innerHTML = '<span class="hint">Không tải được trạng thái.</span>';
             }
@@ -159,6 +237,8 @@
             if (!file) { showMsg(uploadMsg, 'Bạn chưa chọn file.', false); return; }
             const fd = new FormData();
             fd.append('file', file);
+            fd.append('title', document.getElementById('quizTitle').value);
+            fd.append('subject', document.getElementById('quizSubject').value);
             fd.append('mode', document.getElementById('modeSelect').value);
             const k = key();
             if (k) fd.append('admin_key', k);
@@ -170,8 +250,8 @@
                 const data = await res.json().catch(() => ({}));
                 if (res.ok) {
                     showMsg(uploadMsg, data.questions > 0
-                        ? `Tạo đề thành công: ${data.questions} câu từ "${data.filename}". Thí sinh vào / là thi được ngay.`
-                        : `Đã lưu tài liệu "${data.filename}" (chế độ đề ngẫu nhiên - mỗi lượt thi AI sẽ sinh đề mới).`, true);
+                        ? `Đã tạo bộ đề "${data.title}" (${data.questions} câu). Học sinh vào / để chọn và làm.`
+                        : `Đã tạo bộ đề "${data.title}" (chế độ đề ngẫu nhiên - mỗi lượt thi AI sẽ sinh đề mới).`, true);
                     uploadForm.reset();
                 } else {
                     showMsg(uploadMsg, data.error || ('Lỗi ' + res.status), false);
@@ -180,27 +260,7 @@
                 showMsg(uploadMsg, 'Lỗi kết nối: ' + err.message, false);
             } finally {
                 uploadBtn.disabled = false;
-                uploadBtn.textContent = 'Tải lên & tạo đề';
-                loadStatus();
-            }
-        });
-
-        regenBtn.addEventListener('click', async () => {
-            const fd = new FormData();
-            const k = key();
-            if (k) fd.append('admin_key', k);
-            regenBtn.disabled = true;
-            regenBtn.textContent = 'Đang sinh đề... (30-60s)';
-            try {
-                const res = await fetch('/admin/generate', { method: 'POST', body: fd });
-                const data = await res.json().catch(() => ({}));
-                if (res.ok) showMsg(regenMsg, `Đã sinh lại ${data.questions} câu hỏi.`, true);
-                else showMsg(regenMsg, data.error || ('Lỗi ' + res.status), false);
-            } catch (err) {
-                showMsg(regenMsg, 'Lỗi kết nối: ' + err.message, false);
-            } finally {
-                regenBtn.disabled = false;
-                regenBtn.textContent = 'Sinh lại bộ đề từ tài liệu này';
+                uploadBtn.textContent = '+ Tạo bộ đề mới';
                 loadStatus();
             }
         });
