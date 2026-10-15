@@ -5,125 +5,192 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#4f46e5">
 <title>Portal - Quản lý lớp học & đề thi</title>
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+<!-- Font Awesome Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="stylesheet" href="/style.css">
 <style>
     :root {
-        --p-bg: #f1f5f9; --p-card: #ffffff; --p-soft: #f8fafc; --p-line: #e2e8f0;
-        --p-mut: #64748b; --p-ink: #0f172a; --p-acc: #4f46e5; --p-acc2: #7c3aed;
-        --p-grad: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-        --p-shadow: 0 6px 22px rgba(15, 23, 42, .07);
-        --p-ring: rgba(99, 102, 241, .35);
+        --p-bg: #f8fafc;
+        --p-card: #ffffff;
+        --p-soft: #f1f5f9;
+        --p-line: #e2e8f0;
+        --p-mut: #475569;
+        --p-ink: #0f172a;
+        --p-acc: #4f46e5;
+        --p-acc2: #6366f1;
+        --p-grad: linear-gradient(135deg, #4338ca 0%, #4f46e5 50%, #6366f1 100%);
+        --p-shadow: 0 4px 16px -1px rgba(15, 23, 42, 0.07), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+        --p-ring: rgba(99, 102, 241, 0.3);
     }
     html[data-theme="dark"] {
-        --p-bg: #0b1120; --p-card: #111827; --p-soft: #172033; --p-line: #1f2937;
-        --p-mut: #94a3b8; --p-ink: #e5e7eb; --p-acc: #6366f1; --p-acc2: #8b5cf6;
-        --p-grad: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 100%);
-        --p-shadow: 0 8px 26px rgba(0, 0, 0, .45);
-        --p-ring: rgba(129, 140, 248, .45);
+        --p-bg: #0b0f19;
+        --p-card: #131b2e;
+        --p-soft: #1e293b;
+        --p-line: #27354f;
+        --p-mut: #94a3b8;
+        --p-ink: #f8fafc;
+        --p-acc: #6366f1;
+        --p-acc2: #818cf8;
+        --p-grad: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+        --p-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+        --p-ring: rgba(129, 140, 248, 0.35);
     }
     * { box-sizing: border-box; }
     html, body { background: var(--p-bg); }
-    /* style.css (trang thi) đặt body thành flex-column + padding.
-       Portal tự lo layout của mình, nếu để nguyên body flex thì .wrap bị kéo theo
-       min-content và tràn ngang trên điện thoại. */
-    body { margin: 0; padding: 0; display: block; min-height: 0; overflow-x: hidden;
-           color: var(--p-ink); -webkit-text-size-adjust: 100%;
-           font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; }
-    .wrap { width: 100%; max-width: 1080px; margin: 0 auto; padding: 18px 16px 60px; }
-    header.p-top { display: flex; align-items: center; justify-content: space-between; gap: 12px;
-                   padding: 14px 0 18px; flex-wrap: wrap; }
-    .brand { font-weight: 900; font-size: 1.15rem; display: flex; align-items: center; gap: 8px; }
-    .brand small { display: block; font-weight: 500; font-size: .74rem; color: var(--p-mut); }
-    .who { display: flex; align-items: center; gap: 10px; font-size: .88rem; flex-wrap: wrap; }
-    .who .pill { background: var(--p-card); border: 1px solid var(--p-line); padding: 7px 13px;
-                 border-radius: 999px; font-weight: 700; box-shadow: var(--p-shadow);
-                 max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .role-badge { font-size: .72rem; font-weight: 800; padding: 3px 9px; border-radius: 999px;
-                  color: #fff; white-space: nowrap; }
-    .role-teacher { background: linear-gradient(135deg, #4f46e5, #6366f1); }
-    .role-student { background: linear-gradient(135deg, #0ea5e9, #38bdf8); }
-    .role-class_monitor { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
-    .role-team_leader { background: linear-gradient(135deg, #10b981, #34d399); }
-    .role-vice_class_monitor { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
-    .role-custom { background: linear-gradient(135deg, #64748b, #94a3b8); }
+    body {
+        margin: 0; padding: 0; display: block; min-height: 0; overflow-x: hidden;
+        color: var(--p-ink); -webkit-text-size-adjust: 100%;
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        line-height: 1.55;
+    }
+    .wrap { width: 100%; max-width: 1100px; margin: 0 auto; padding: 20px 18px 64px; }
+    header.p-top {
+        display: flex; align-items: center; justify-content: space-between; gap: 14px;
+        padding: 12px 0 20px; flex-wrap: wrap; border-bottom: 1px solid var(--p-line);
+        margin-bottom: 20px;
+    }
+    .brand {
+        font-weight: 900; font-size: 1.2rem; display: flex; align-items: center; gap: 10px;
+        letter-spacing: -0.02em; color: var(--p-ink);
+    }
+    .brand small {
+        display: block; font-weight: 600; font-size: 0.76rem; color: var(--p-mut);
+        letter-spacing: 0; margin-top: 2px;
+    }
+    .who { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; flex-wrap: wrap; }
+    .who .pill {
+        background: var(--p-card); border: 1.5px solid var(--p-line); padding: 7px 14px;
+        border-radius: 999px; font-weight: 700; box-shadow: var(--p-shadow);
+        max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        display: inline-flex; align-items: center; gap: 8px;
+    }
+    .role-badge {
+        font-size: 0.72rem; font-weight: 800; padding: 3px 10px; border-radius: 999px;
+        color: #fff; white-space: nowrap; letter-spacing: 0.02em;
+    }
+    .role-teacher { background: linear-gradient(135deg, #4338ca, #6366f1); }
+    .role-student { background: linear-gradient(135deg, #0284c7, #38bdf8); }
+    .role-class_monitor { background: linear-gradient(135deg, #d97706, #fbbf24); }
+    .role-team_leader { background: linear-gradient(135deg, #059669, #34d399); }
+    .role-vice_class_monitor { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
+    .role-custom { background: linear-gradient(135deg, #475569, #94a3b8); }
 
-    .btn { border: 0; border-radius: 11px; padding: 10px 15px; font-weight: 800; font-size: .87rem;
-           cursor: pointer; background: var(--p-grad); color: #fff; font-family: inherit;
-           transition: transform .16s ease, box-shadow .16s ease, opacity .16s ease; }
-    .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 16px var(--p-ring); }
+    .btn {
+        border: 0; border-radius: 12px; padding: 10px 18px; font-weight: 800; font-size: 0.88rem;
+        cursor: pointer; background: var(--p-grad); color: #fff; font-family: inherit;
+        transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        text-decoration: none;
+    }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px var(--p-ring); }
     .btn:active:not(:disabled) { transform: translateY(0); }
-    .btn.sec { background: var(--p-soft); color: var(--p-ink); border: 1px solid var(--p-line); }
+    .btn.sec { background: var(--p-soft); color: var(--p-ink); border: 1.5px solid var(--p-line); }
+    .btn.sec:hover:not(:disabled) { border-color: var(--p-acc); }
     .btn.danger { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    .btn.danger:hover:not(:disabled) { background: #fecaca; }
     .btn.ok { background: #d1fae5; color: #047857; border: 1px solid #a7f3d0; }
-    html[data-theme="dark"] .btn.danger { background: rgba(239, 68, 68, .16); color: #fca5a5; border-color: rgba(239, 68, 68, .35); }
-    html[data-theme="dark"] .btn.ok { background: rgba(16, 185, 129, .16); color: #6ee7b7; border-color: rgba(16, 185, 129, .35); }
-    .btn.sm { padding: 7px 11px; font-size: .78rem; border-radius: 9px; }
-    .btn:disabled { opacity: .55; cursor: not-allowed; }
+    .btn.ok:hover:not(:disabled) { background: #a7f3d0; }
+    html[data-theme="dark"] .btn.danger { background: rgba(239, 68, 68, 0.18); color: #fca5a5; border-color: rgba(239, 68, 68, 0.35); }
+    html[data-theme="dark"] .btn.ok { background: rgba(16, 185, 129, 0.18); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.35); }
+    .btn.sm { padding: 7px 12px; font-size: 0.8rem; border-radius: 10px; }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
     .btn:focus-visible, .tab:focus-visible, input:focus-visible, select:focus-visible {
-        outline: 3px solid var(--p-ring); outline-offset: 1px; }
+        outline: 3px solid var(--p-ring); outline-offset: 1px;
+    }
 
-    .card { background: var(--p-card); border: 1px solid var(--p-line); border-radius: 18px;
-            padding: 18px; margin-bottom: 14px; box-shadow: var(--p-shadow); }
-    .card h3 { margin: 0 0 4px; font-size: 1.02rem; display: flex; align-items: center; gap: 8px;
-               flex-wrap: wrap; }
-    .card .sub { color: var(--p-mut); font-size: .82rem; margin: 0 0 12px; }
-    .grid { display: grid; gap: 12px; }
-    .grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
-    label.fl { display: block; font-size: .78rem; font-weight: 800; color: var(--p-mut);
-               text-transform: uppercase; letter-spacing: .4px; margin: 10px 0 5px; }
-    input, select { width: 100%; padding: 11px 12px; border: 1px solid var(--p-line); border-radius: 11px;
-                    font-size: .92rem; background: var(--p-card); color: var(--p-ink);
-                    font-family: inherit; transition: border-color .16s ease, box-shadow .16s ease; }
+    .card {
+        background: var(--p-card); border: 1.5px solid var(--p-line); border-radius: 20px;
+        padding: 22px; margin-bottom: 16px; box-shadow: var(--p-shadow);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .card h3 {
+        margin: 0 0 6px; font-size: 1.08rem; font-weight: 800; display: flex; align-items: center;
+        gap: 8px; flex-wrap: wrap; letter-spacing: -0.01em;
+    }
+    .card .sub { color: var(--p-mut); font-size: 0.84rem; margin: 0 0 14px; line-height: 1.5; }
+    .grid { display: grid; gap: 14px; }
+    .grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+    label.fl {
+        display: block; font-size: 0.78rem; font-weight: 800; color: var(--p-mut);
+        text-transform: uppercase; letter-spacing: 0.4px; margin: 12px 0 6px;
+    }
+    input, select {
+        width: 100%; padding: 11px 14px; border: 1.5px solid var(--p-line); border-radius: 12px;
+        font-size: 0.92rem; background: var(--p-card); color: var(--p-ink);
+        font-family: inherit; transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    }
     input:hover, select:hover { border-color: var(--p-acc); }
+    input:focus, select:focus { border-color: var(--p-acc); box-shadow: 0 0 0 4px var(--p-ring); outline: none; }
 
-    .tabs { display: flex; gap: 8px; margin-bottom: 16px; padding: 5px; border-radius: 999px;
-            background: var(--p-soft); border: 1px solid var(--p-line);
-            overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .tabs {
+        display: flex; gap: 8px; margin-bottom: 20px; padding: 6px; border-radius: 999px;
+        background: var(--p-soft); border: 1.5px solid var(--p-line);
+        overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
     .tabs::-webkit-scrollbar { display: none; }
-    .tab { padding: 9px 16px; border-radius: 999px; background: transparent; color: var(--p-mut);
-           font-weight: 800; font-size: .86rem; cursor: pointer; border: 0; white-space: nowrap;
-           font-family: inherit; transition: background .18s ease, color .18s ease; }
+    .tab {
+        padding: 9px 18px; border-radius: 999px; background: transparent; color: var(--p-mut);
+        font-weight: 800; font-size: 0.88rem; cursor: pointer; border: 0; white-space: nowrap;
+        font-family: inherit; transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+    }
     .tab:hover { color: var(--p-ink); }
-    .tab.active { background: var(--p-grad); color: #fff; box-shadow: 0 4px 12px var(--p-ring); }
+    .tab.active { background: var(--p-grad); color: #fff; box-shadow: 0 4px 14px var(--p-ring); }
 
-    .tbl-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    table.pt { width: 100%; border-collapse: collapse; font-size: .86rem; }
-    table.pt th, table.pt td { padding: 10px 9px; border-bottom: 1px solid var(--p-line);
-                               text-align: left; vertical-align: middle; }
-    table.pt th { color: var(--p-mut); font-size: .73rem; text-transform: uppercase;
-                  letter-spacing: .4px; background: var(--p-soft); white-space: nowrap; }
+    .tbl-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 14px; }
+    table.pt { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    table.pt th, table.pt td { padding: 12px 12px; border-bottom: 1px solid var(--p-line); text-align: left; vertical-align: middle; }
+    table.pt th {
+        color: var(--p-mut); font-size: 0.74rem; font-weight: 800; text-transform: uppercase;
+        letter-spacing: 0.5px; background: var(--p-soft); white-space: nowrap;
+    }
+    table.pt tbody tr { transition: background 0.15s ease; }
     table.pt tbody tr:hover { background: var(--p-soft); }
     table.pt td select { min-width: 130px; }
 
-    .code { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-weight: 800;
-            background: var(--p-soft); border: 1px solid var(--p-line);
-            padding: 4px 10px; border-radius: 8px; letter-spacing: 2px; white-space: nowrap; }
-    .tag { display: inline-flex; align-items: center; gap: 5px; font-size: .72rem; font-weight: 800;
-           padding: 4px 9px; border-radius: 999px; background: var(--p-soft);
-           color: var(--p-mut); border: 1px solid var(--p-line); }
-    .tag.pub { background: rgba(16, 185, 129, .14); color: #047857; border-color: rgba(16, 185, 129, .3); }
-    .tag.draft { background: rgba(245, 158, 11, .16); color: #b45309; border-color: rgba(245, 158, 11, .32); }
+    .code {
+        font-family: 'JetBrains Mono', monospace; font-weight: 800;
+        background: var(--p-soft); border: 1.5px solid var(--p-line);
+        padding: 4px 10px; border-radius: 8px; letter-spacing: 1.5px; white-space: nowrap;
+    }
+    .tag {
+        display: inline-flex; align-items: center; gap: 5px; font-size: 0.74rem; font-weight: 800;
+        padding: 4px 10px; border-radius: 999px; background: var(--p-soft);
+        color: var(--p-mut); border: 1.5px solid var(--p-line);
+    }
+    .tag.pub { background: rgba(16, 185, 129, 0.15); color: #047857; border-color: rgba(16, 185, 129, 0.3); }
+    .tag.draft { background: rgba(245, 158, 11, 0.16); color: #b45309; border-color: rgba(245, 158, 11, 0.32); }
     html[data-theme="dark"] .tag.pub { color: #6ee7b7; }
     html[data-theme="dark"] .tag.draft { color: #fcd34d; }
-    .muted { color: var(--p-mut); font-size: .82rem; }
-    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .empty { text-align: center; color: var(--p-mut); padding: 26px 14px; font-size: .9rem;
-             border: 1px dashed var(--p-line); border-radius: 14px; background: var(--p-soft); }
+    .muted { color: var(--p-mut); font-size: 0.83rem; }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .empty {
+        text-align: center; color: var(--p-mut); padding: 32px 16px; font-size: 0.92rem;
+        border: 2px dashed var(--p-line); border-radius: 16px; background: var(--p-soft);
+    }
 
-    #toast { position: fixed; right: 16px; bottom: 16px; left: auto; display: flex;
-             flex-direction: column; gap: 8px; z-index: 50; max-width: calc(100vw - 32px); }
-    .toast { background: #0f172a; color: #fff; padding: 12px 16px; border-radius: 12px;
-             font-size: .86rem; font-weight: 600; box-shadow: 0 10px 28px rgba(0, 0, 0, .3);
-             animation: pop .2s ease; }
+    #toast { position: fixed; right: 20px; bottom: 20px; left: auto; display: flex;
+             flex-direction: column; gap: 10px; z-index: 1200; max-width: calc(100vw - 40px); }
+    .toast {
+        background: #0f172a; color: #fff; padding: 12px 18px; border-radius: 14px;
+        font-size: 0.88rem; font-weight: 700; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        animation: pop 0.22s ease; display: inline-flex; align-items: center; gap: 8px;
+    }
     .toast.err { background: #b91c1c; }
-    @keyframes pop { from { transform: translateY(10px); opacity: 0; } }
+    @keyframes pop { from { transform: translateY(12px) scale(0.95); opacity: 0; } }
 
-    .auth-box { max-width: 470px; margin: 34px auto; }
-    .auth-box .card-head { text-align: center; margin-bottom: 6px; }
-    .auth-box .card-head .emoji { font-size: 1.9rem; display: block; margin-bottom: 6px; }
+    .auth-box { max-width: 480px; margin: 38px auto; padding: 32px 28px; }
+    .auth-box .card-head { text-align: center; margin-bottom: 12px; }
+    .auth-box .card-head .emoji { font-size: 2.2rem; display: block; margin-bottom: 8px; }
+    .auth-divider { display: flex; align-items: center; gap: 12px; margin: 18px 0 14px;
+                    color: var(--p-mut); font-size: 0.78rem; font-weight: 800; text-transform: uppercase; }
+    .auth-divider::before, .auth-divider::after { content: ''; height: 1px; flex: 1; background: var(--p-line); }
     .hidden { display: none !important; }
     .member-sel { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-    .member-sel select { width: auto; padding: 6px 8px; font-size: .8rem; }
+    .member-sel select { width: auto; padding: 6px 10px; font-size: 0.82rem; }
 
     /* Nhúng trong drawer của trang chủ: gọn lại để không lặp lại tiêu đề */
     body.embedded { background: var(--p-card); }
@@ -132,41 +199,46 @@
     body.embedded .brand small { display: none; }
     body.embedded .auth-box { margin: 14px auto; }
 
-    /* =====================  RESPONSIVE (ĐIỆN THOẠI / MÁY TÍNH BẢNG)  ===================== */
-    @media (max-width: 760px) {
-        .wrap { padding: 14px 12px 44px; }
-        .card { padding: 15px; border-radius: 16px; }
-        .card h3 { font-size: .98rem; }
+    /* ===================== RESPONSIVE (MOBILE & TABLET) ===================== */
+    @media (max-width: 768px) {
+        .wrap { padding: 14px 12px 48px; }
+        .card { padding: 16px; border-radius: 16px; }
+        .card h3 { font-size: 1rem; }
         .grid.cols-2 { grid-template-columns: 1fr; }
         .row > input, .row > select { max-width: 100% !important; flex: 1 1 160px; }
         .row > .btn { flex: 0 1 auto; }
-        table.pt { font-size: .82rem; }
-        table.pt th, table.pt td { padding: 8px 7px; }
-        .auth-box { margin: 18px auto; }
-        #toast { left: 12px; right: 12px; bottom: 12px; }
+        table.pt { font-size: 0.82rem; }
+        table.pt th, table.pt td { padding: 9px 8px; }
+        .auth-box { margin: 18px auto; padding: 20px 16px; }
+        #toast { left: 14px; right: 14px; bottom: 14px; }
         .toast { max-width: none; }
-        .who .pill { font-size: .8rem; padding: 6px 11px; }
+        .who .pill { font-size: 0.8rem; padding: 6px 11px; }
         .brand { font-size: 1.05rem; }
-        .p-top .btn { padding: 8px 12px; font-size: .82rem; }
+        .p-top .btn { padding: 8px 12px; font-size: 0.82rem; }
     }
     @media (max-width: 430px) {
         .wrap { padding: 12px 10px 40px; }
-        .card { padding: 13px; }
-        .brand { font-size: 1rem; }
-        .tab { padding: 8px 13px; font-size: .82rem; }
-        .btn { padding: 9px 12px; font-size: .83rem; }
-        .who { gap: 7px; }
-        .who .pill { font-size: .76rem; max-width: 58vw; }
+        .card { padding: 14px; }
+        .brand { font-size: 0.98rem; }
+        .tab { padding: 8px 13px; font-size: 0.82rem; }
+        .btn { padding: 9px 14px; font-size: 0.83rem; }
+        .who { gap: 6px; }
+        .who .pill { font-size: 0.76rem; max-width: 58vw; }
     }
 </style>
 </head>
 <body>
 <div class="wrap">
     <header class="p-top">
-        <div class="brand">🏫 Quản lý lớp học <small>Hệ thống khảo sát &amp; đánh giá trực tuyến</small></div>
+        <div class="brand">
+            <i class="fa-solid fa-school" style="color:var(--p-acc)"></i>
+            <div>Quản lý lớp học <small>Hệ thống khảo sát &amp; đánh giá trực tuyến</small></div>
+        </div>
         <div class="who">
             <span class="pill hidden" id="userPill"></span>
-            <button class="btn sec sm hidden" id="logoutBtn">Đăng xuất</button>
+            <button class="btn sec sm hidden" id="logoutBtn">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng xuất
+            </button>
         </div>
     </header>
 
@@ -178,8 +250,12 @@
             <p class="sub">Đăng nhập để vào lớp của bạn, làm bài thi được giao và xem bảng điểm.</p>
         </div>
         <div class="tabs" role="tablist" aria-label="Tài khoản">
-            <button class="tab active" id="tabLogin" type="button" role="tab" aria-selected="true" aria-controls="loginForm">Đăng nhập</button>
-            <button class="tab" id="tabReg" type="button" role="tab" aria-selected="false" aria-controls="regForm">Đăng ký</button>
+            <button class="tab active" id="tabLogin" type="button" role="tab" aria-selected="true" aria-controls="loginForm">
+                <i class="fa-solid fa-right-to-bracket"></i> Đăng nhập
+            </button>
+            <button class="tab" id="tabReg" type="button" role="tab" aria-selected="false" aria-controls="regForm">
+                <i class="fa-solid fa-user-plus"></i> Đăng ký
+            </button>
         </div>
 
         <form id="loginForm">
@@ -187,7 +263,9 @@
             <input id="loginEmail" type="email" autocomplete="email" placeholder="gv@truong.edu" required>
             <label class="fl" for="loginPass">Mật khẩu</label>
             <input id="loginPass" type="password" autocomplete="current-password" placeholder="••••••" required>
-            <button class="btn" style="width:100%;margin-top:16px" type="submit" id="loginSubmitBtn">Đăng nhập</button>
+            <button class="btn" style="width:100%;margin-top:16px" type="submit" id="loginSubmitBtn">
+                <span>Đăng nhập</span> <i class="fa-solid fa-arrow-right"></i>
+            </button>
         </form>
 
         <form id="regForm" class="hidden">
@@ -202,8 +280,20 @@
             </select>
             <label class="fl" for="regPass">Mật khẩu (tối thiểu 6 ký tự)</label>
             <input id="regPass" type="password" minlength="6" required>
-            <button class="btn" style="width:100%;margin-top:16px" type="submit" id="regSubmitBtn">Tạo tài khoản</button>
+            <button class="btn" style="width:100%;margin-top:16px" type="submit" id="regSubmitBtn">
+                <span>Tạo tài khoản</span> <i class="fa-solid fa-check"></i>
+            </button>
         </form>
+        <div class="auth-divider"><span>hoặc</span></div>
+        <button class="btn sec" style="width:100%; display:inline-flex; align-items:center; justify-content:center; gap:10px;" type="button" id="googleLoginBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+            </svg>
+            <span>Tiếp tục với Google</span>
+        </button>
     </div>
 
     <!-- ================= APP ================= -->
@@ -287,11 +377,28 @@ function setBusy(button, busy, label) {
 }
 
 async function boot() {
+    await finishOAuth();
     try {
         const me = await api('/api/auth/me');
         state.user = me.user;
     } catch (e) { state.user = null; }
     render();
+}
+
+async function finishOAuth() {
+    const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+    const accessToken = hash.get('access_token');
+    if (!accessToken) return;
+    try {
+        const r = await api('/api/auth/external', {method: 'POST', json: {access_token: accessToken}});
+        history.replaceState({}, document.title, location.pathname);
+        state.user = r.user;
+        toast(`Xin chào ${r.user.name} 👋`);
+        notifyHost({type: 'auth', user: r.user});
+    } catch (err) {
+        history.replaceState({}, document.title, location.pathname);
+        toast(err.message, true);
+    }
 }
 
 function render() {
@@ -310,15 +417,16 @@ function render() {
         ? [['classes', 'Lớp học của tôi'], ['exams', 'Ngân hàng đề'], ['results', 'Bảng điểm']]
         : [['classes', 'Lớp của tôi'], ['exams', 'Bài thi'], ['results', 'Điểm của tôi']];
     if (!state.tab || !tabs.some(t => t[0] === state.tab)) state.tab = tabs[0][0];
+    const tabIcons = { classes: 'fa-chalkboard-user', exams: 'fa-book-bookmark', results: 'fa-chart-simple' };
     $('mainTabs').innerHTML = tabs.map(([k, label]) =>
-        `<button class="tab ${state.tab === k ? 'active' : ''}" data-tab="${k}">${label}</button>`).join('');
+        `<button class="tab ${state.tab === k ? 'active' : ''}" data-tab="${k}"><i class="fa-solid ${tabIcons[k] || 'fa-circle'}"></i> ${label}</button>`).join('');
     $('mainTabs').querySelectorAll('.tab').forEach(b => b.onclick = () => { state.tab = b.dataset.tab; render(); });
     loadTab();
 }
 
 async function loadTab() {
     const panel = $('panel');
-    panel.innerHTML = '<div class="card"><div class="empty">Đang tải...</div></div>';
+    panel.innerHTML = '<div class="card"><div class="empty"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải dữ liệu...</div></div>';
     try {
         if (state.tab === 'classes') await viewClasses();
         else if (state.tab === 'exams') await viewExams();
@@ -335,17 +443,17 @@ async function viewClasses() {
     const isTeacher = state.user.role === 'teacher';
     let html = '';
     if (isTeacher) {
-        html += `<div class="card"><h3>➕ Tạo lớp mới</h3>
-            <div class="row" style="margin-top:8px">
+        html += `<div class="card"><h3><i class="fa-solid fa-plus-circle" style="color:var(--p-acc)"></i> Tạo lớp học mới</h3>
+            <div class="row" style="margin-top:10px">
                 <input id="newClassName" placeholder="Tên lớp, ví dụ 12A1" style="max-width:220px">
                 <input id="newClassGrade" placeholder="Khối (tùy chọn)" style="max-width:130px">
-                <button class="btn" id="createClassBtn">Tạo lớp</button>
+                <button class="btn" id="createClassBtn"><i class="fa-solid fa-plus"></i> Tạo lớp</button>
             </div></div>`;
     } else {
-        html += `<div class="card"><h3>🔑 Vào lớp bằng mã</h3>
-            <div class="row" style="margin-top:8px">
+        html += `<div class="card"><h3><i class="fa-solid fa-key" style="color:var(--p-acc)"></i> Vào lớp bằng mã mời</h3>
+            <div class="row" style="margin-top:10px">
                 <input id="joinCode" placeholder="Mã 6 ký tự, ví dụ 45FE3C" style="max-width:220px; text-transform:uppercase">
-                <button class="btn" id="joinClassBtn">Vào lớp</button>
+                <button class="btn" id="joinClassBtn"><i class="fa-solid fa-right-to-bracket"></i> Vào lớp</button>
             </div></div>`;
     }
     html += '<div class="grid cols-2">' + (state.classes.length ? state.classes.map(c => {
@@ -354,14 +462,14 @@ async function viewClasses() {
             : (mine && mine !== 'student'
                 ? roleBadge(mine, c.my_role_label) : '');
         return `<div class="card" style="margin:0">
-            <h3>${esc(c.name)} ${c.grade ? `<span class="tag">Khối ${esc(c.grade)}</span>` : ''} ${badge}</h3>
+            <h3><i class="fa-solid fa-graduation-cap" style="color:var(--p-acc)"></i> ${esc(c.name)} ${c.grade ? `<span class="tag">Khối ${esc(c.grade)}</span>` : ''} ${badge}</h3>
             <p class="sub">Mã lớp: <span class="code">${esc(c.join_code)}</span>
-                <button class="btn sec sm" data-copy="${esc(c.join_code)}">Sao chép</button>
-                · ${c.members.length} học sinh · ${c.teams.length} tổ</p>
+                <button class="btn sec sm" data-copy="${esc(c.join_code)}"><i class="fa-regular fa-copy"></i> Sao chép</button>
+                · <i class="fa-solid fa-users"></i> ${c.members.length} học sinh · <i class="fa-solid fa-layer-group"></i> ${c.teams.length} tổ</p>
             <div class="row">
-                <button class="btn sm" data-open="${c.id}">Quản lý / Bảng điểm</button>
+                <button class="btn sm" data-open="${c.id}"><i class="fa-solid fa-chart-line"></i> Quản lý / Bảng điểm</button>
             </div></div>`;
-    }).join('') : '<div class="empty">Chưa có lớp nào.</div>') + '</div>';
+    }).join('') : '<div class="empty"><i class="fa-regular fa-folder-open"></i> Chưa có lớp nào.</div>') + '</div>';
     $('panel').innerHTML = html;
 
     if (isTeacher) $('createClassBtn').onclick = async () => {
@@ -640,14 +748,14 @@ async function viewExams() {
     let html = '';
 
     if (isTeacher) {
-        html += `<div class="card"><h3>➕ Tạo đề thi mới (AI sinh 40 câu từ tài liệu)</h3>
+        html += `<div class="card"><h3><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--p-acc)"></i> Tạo đề thi mới (AI sinh 40 câu từ tài liệu)</h3>
             <p class="sub">Chọn một bộ đề có sẵn trong kho, hoặc tải tài liệu .pdf / .docx / .txt (tối đa 5MB) để AI sinh 40 câu trắc nghiệm.</p>
             <label class="fl" for="examQuiz">Dùng lại bộ đề trong kho</label>
             <select id="examQuiz"><option value="">-- Tự sinh mới từ tài liệu --</option></select>
             <label class="fl" for="examTitle">Tên đề</label>
             <input id="examTitle" placeholder="Ví dụ: Đề thi thử THPT - Tuần 3" maxlength="120">
             <label class="fl" for="examSubject">Môn / chủ đề (tùy chọn)</label>
-            <input id="examSubject" placeholder="Ví dụ: Toán" maxlength="60">
+            <input id="examSubject" placeholder="Ví dụ: Tiếng Anh, Toán, ..." maxlength="60">
             <div class="grid cols-2">
                 <div><label class="fl" for="examDuration">Thời lượng (phút)</label>
                      <input id="examDuration" type="number" value="60" min="1" max="300"></div>
@@ -658,19 +766,17 @@ async function viewExams() {
             <div class="row">${classes.length ? classes.map(c =>
                 `<label class="tag" style="cursor:pointer"><input type="checkbox" class="clsPick" value="${c.id}" style="width:auto"> ${esc(c.name)}</label>`
             ).join('') : '<span class="muted">Chưa có lớp.</span>'}</div>
-            <button class="btn" id="createExamBtn" style="margin-top:14px">🤖 Tạo đề với AI</button>
+            <button class="btn" id="createExamBtn" style="margin-top:16px"><i class="fa-solid fa-wand-magic-sparkles"></i> Tạo đề với AI</button>
             <span class="muted" id="examHint"></span></div>`;
     }
 
     html += '<div class="grid cols-2">' + (state.exams.length ? state.exams.map(e => {
         const clsNames = e.class_ids.map(id => (classes.find(c => c.id === id) || {}).name || id).join(', ');
-        const picked = state.user.role === 'teacher'
-            ? classes.filter(c => e.class_ids.includes(c.id)).map(c => c.id) : [];
         return `<div class="card" style="margin:0">
             <h3>${esc(e.title)} <span class="tag ${e.published ? 'pub' : 'draft'}">${e.published ? 'ĐANG MỞ' : 'BẢN NHÁP'}</span></h3>
             <p class="sub">${e.subject ? '📚 ' + esc(e.subject) + ' · ' : ''}${e.question_count} câu · ${e.duration_minutes} phút · ${esc(e.filename || 'không có file')}
              ${clsNames ? ' · Lớp: ' + esc(clsNames) : ''}</p>`;
-    }).join('') : '<div class="empty">Chưa có đề nào.</div>') + '</div>';
+    }).join('') : '<div class="empty"><i class="fa-regular fa-folder-open"></i> Chưa có đề nào.</div>') + '</div>';
 
     if (isTeacher) {
         html += '<div id="examDetail"></div>';
@@ -680,9 +786,9 @@ async function viewExams() {
                 <h3>${esc(e.title)}</h3>
                 <p class="sub">${e.subject ? esc(e.subject) + ' · ' : ''}${e.question_count} câu · ${e.duration_minutes} phút
                  · ${e.done ? '✅ Đã nộp bài' : 'Chưa làm'}</p>
-                ${e.done ? '<span class="tag pub">Đã hoàn thành</span>'
-                         : `<button class="btn" data-start="${e.id}">🎓 Vào phòng thi</button>`}
-            </div>`).join('') : '<div class="empty">Chưa có bài thi nào được gán cho bạn.</div>') + '</div>';
+                ${e.done ? '<span class="tag pub"><i class="fa-solid fa-circle-check"></i> Đã hoàn thành</span>'
+                         : `<button class="btn" data-start="${e.id}"><i class="fa-solid fa-bolt-lightning"></i> Vào phòng thi</button>`}
+            </div>`).join('') : '<div class="empty"><i class="fa-regular fa-folder-open"></i> Chưa có bài thi nào được gán cho bạn.</div>') + '</div>';
     }
     $('panel').innerHTML = html;
 
@@ -709,12 +815,12 @@ async function viewExams() {
             const ids = [...document.querySelectorAll('.clsPick:checked')].map(c => c.value);
             fd.append('class_ids', JSON.stringify(ids));
             const btn = $('createExamBtn');
-            btn.disabled = true; btn.textContent = 'Đang chờ AI sinh 40 câu (30-60s)...';
+            btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang chờ AI sinh 40 câu (30-60s)...';
             try {
                 const r = await api('/api/exams', {method: 'POST', body: fd});
                 toast(`Đã tạo đề "${r.exam.title}" với ${r.exam.question_count} câu ✓`);
                 loadTab();
-            } catch (e) { toast(e.message, true); btn.disabled = false; btn.textContent = '🤖 Tạo đề với AI'; }
+            } catch (e) { toast(e.message, true); btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Tạo đề với AI'; }
         };
         $('panel').querySelectorAll('[data-start]').forEach(() => {});
         await renderExamDetail();
@@ -731,8 +837,8 @@ async function renderExamDetail() {
     const mount = $('examDetail');
     if (!mount) return;
     const classes = (await api('/api/classes')).classes;
-    let html = '<div class="card"><h3>🗂 Quản lý đề</h3><div style="overflow-x:auto"><table class="pt"><thead><tr>' +
-        '<th>Đề</th><th>Trạng thái</th><th>Lớp được gán</th><th></th></tr></thead><tbody>';
+    let html = '<div class="card"><h3><i class="fa-solid fa-folder-tree" style="color:var(--p-acc)"></i> Quản lý danh sách đề thi</h3><div style="overflow-x:auto"><table class="pt"><thead><tr>' +
+        '<th>Đề</th><th>Trạng thái</th><th>Lớp được gán</th><th>Thao tác</th></tr></thead><tbody>';
     for (const e of state.exams) {
         const names = e.class_ids.map(id => (classes.find(c => c.id === id) || {}).name || id).join(', ');
         html += `<tr data-row="${e.id}">
@@ -743,12 +849,12 @@ async function renderExamDetail() {
                     `<label style="font-size:.78rem"><input type="checkbox" class="pick_${e.id}" value="${c.id}"
                      ${e.class_ids.includes(c.id) ? 'checked' : ''} style="width:auto"> ${esc(c.name)}</label>`
                 ).join(' ')}</div></td>
-            <td class="row" style="min-width:250px">
-                <button class="btn sm" data-assign="${e.id}">Gán lớp</button>
-                <button class="btn ${e.published ? 'sec' : 'ok'} sm" data-pub="${e.id}">${e.published ? 'Ẩn đề' : 'Đăng đề'}</button>
-                <button class="btn sec sm" data-regen="${e.id}">🎲 Sinh lại</button>
-                <button class="btn sec sm" data-score="${e.id}">🏆 Điểm</button>
-                <button class="btn danger sm" data-del="${e.id}">Xóa</button>
+            <td class="row" style="min-width:280px">
+                <button class="btn sm" data-assign="${e.id}"><i class="fa-solid fa-share-nodes"></i> Gán lớp</button>
+                <button class="btn ${e.published ? 'sec' : 'ok'} sm" data-pub="${e.id}"><i class="fa-solid ${e.published ? 'fa-eye-slash' : 'fa-check'}"></i> ${e.published ? 'Ẩn đề' : 'Đăng đề'}</button>
+                <button class="btn sec sm" data-regen="${e.id}"><i class="fa-solid fa-rotate-right"></i> Sinh lại</button>
+                <button class="btn sec sm" data-score="${e.id}"><i class="fa-solid fa-trophy"></i> Điểm</button>
+                <button class="btn danger sm" data-del="${e.id}"><i class="fa-solid fa-trash-can"></i> Xóa</button>
             </td></tr>`;
     }
     if (!state.exams.length) html += '<tr><td colspan="4" class="empty">Chưa có đề nào.</td></tr>';
@@ -859,6 +965,9 @@ $('regForm').onsubmit = async (e) => {
         state.user = r.user; state.tab = ''; toast('Tạo tài khoản thành công 🎉'); render();
         notifyHost({type: 'auth', user: r.user});
     } catch (err) { toast(err.message, true); setBusy(button, false); }
+};
+$('googleLoginBtn').onclick = () => {
+    window.top.location.href = '/api/auth/google';
 };
 $('logoutBtn').onclick = async () => {
     await api('/api/auth/logout', {method: 'POST'});

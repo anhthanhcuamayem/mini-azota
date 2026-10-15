@@ -15,6 +15,7 @@ import requests
 
 import school_store as store
 import supabase_store as db
+import supabase_auth as auth
 from school_api import router as school_router
 
 app = FastAPI()
@@ -43,7 +44,6 @@ async def get_style():
 
 EXAM_DURATION_MINUTES = 60
 EXAM_QUESTION_COUNT = 40
-AI_CONFIG_FILE = "ai_config.json"
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 MIN_SOURCE_CHARS = 200
 MAX_SOURCE_CHARS = 60000
@@ -66,39 +66,30 @@ def load_env(path=".env"):
 
 
 load_env()
+# supabase_store đọc biến môi trường lúc module được import trước đó. Nạp lại
+# cấu hình sau khi đọc .env để server dùng đúng Supabase URL và secret key.
+db.configure(
+    os.environ.get("SUPABASE_URL", ""),
+    os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    or os.environ.get("SUPABASE_SECRET_KEY", "").strip()
+    or os.environ.get("SUPABASE_KEY", "").strip(),
+)
+auth.configure(
+    os.environ.get("SUPABASE_URL", ""),
+    os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    or os.environ.get("SUPABASE_SECRET_KEY", "").strip()
+    or os.environ.get("SUPABASE_KEY", "").strip(),
+    os.environ.get("SUPABASE_PUBLISHABLE_KEY", "").strip()
+    or os.environ.get("SUPABASE_ANON_KEY", "").strip(),
+)
 AI_BASE_URL = os.environ.get("AI_BASE_URL", "").strip()
 AI_API_KEY = os.environ.get("AI_API_KEY", "").strip()
 AI_MODEL = os.environ.get("AI_MODEL", "llama-3.3-70b-versatile").strip()
 ADMIN_KEY = os.environ.get("ADMIN_KEY", "").strip()
 
-def load_ai_config():
-    """Nạp cấu hình AI do admin lưu; bí mật chỉ tồn tại phía server."""
-    global AI_BASE_URL, AI_API_KEY, AI_MODEL
-    if not os.path.exists(AI_CONFIG_FILE):
-        return
-    try:
-        with open(AI_CONFIG_FILE, "r", encoding="utf-8") as f:
-            config = json.load(f)
-        AI_BASE_URL = str(config.get("base_url") or AI_BASE_URL).strip()
-        AI_API_KEY = str(config.get("api_key") or AI_API_KEY).strip()
-        AI_MODEL = str(config.get("model") or AI_MODEL).strip()
-    except (OSError, ValueError, TypeError):
-        pass
-
-
-load_ai_config()
-
 def chat_completions_url(base_url):
     url = (base_url or "").strip().rstrip("/")
     return url if url.endswith("/chat/completions") else url + "/chat/completions"
-
-def save_ai_config(base_url, api_key, model):
-    with open(AI_CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump({"base_url": base_url, "api_key": api_key, "model": model}, f)
-    try:
-        os.chmod(AI_CONFIG_FILE, 0o600)
-    except OSError:
-        pass
 
 def get_vn_time():
     vn_tz = timezone(timedelta(hours=7))
@@ -377,11 +368,17 @@ async def start_exam(request: Request):
     try:
         data = await request.json()
         name = (data.get("name") or "").strip()
+        # Khi đã đăng nhập, tên bài làm luôn lấy từ tài khoản. Không tin tên
+        # gửi từ trình duyệt để tránh việc đổi tên người nộp bài.
+        account = store.user_from_token(request.cookies.get("sid"))
+        if account and account.get("name"):
+            name = account["name"].strip()
         quiz_id = (data.get("quiz_id") or "").strip()
         if not name:
             return JSONResponse(status_code=400, content={"error": "Vui lòng nhập họ tên thí sinh!"})
-        if len(name) > 50:
-            return JSONResponse(status_code=400, content={"error": "Tên không được quá 50 ký tự!"})
+        max_name_len = 60 if account else 50
+        if len(name) > max_name_len:
+            return JSONResponse(status_code=400, content={"error": f"Tên không được quá {max_name_len} ký tự!"})
         if not quiz_id:
             return JSONResponse(status_code=400, content={"error": "Vui lòng chọn bộ đề trước khi bắt đầu!"})
         quiz = store.get_quiz(quiz_id)
@@ -532,40 +529,6 @@ async def admin_status():
             "updated_at": q.get("updated_at"),
         } for q in quizzes],
     }
-
-
-@app.post("/admin/test-api")
-async def admin_test_api(request: Request, payload: dict):
-    """Chỉ lưu cấu hình sau khi API trả lời thành công."""
-    global AI_BASE_URL, AI_API_KEY, AI_MODEL
-    if not admin_authorized(request, str(payload.get("admin_key") or "")):
-        return JSONResponse(status_code=403, content={"error": "Sai admin key."})
-    base_url = str(payload.get("base_url") or "").strip()
-    api_key = str(payload.get("api_key") or "").strip()
-    model = str(payload.get("model") or AI_MODEL).strip()
-    if not base_url or not api_key or not model:
-        return JSONResponse(status_code=400, content={"error": "Cần nhập Base URL, API key và model."})
-    try:
-        response = requests.post(
-            chat_completions_url(base_url),
-            json={"model": model, "messages": [{"role": "user", "content": "Reply with OK"}], "max_tokens": 8},
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            timeout=(10, 30),
-        )
-    except requests.RequestException as e:
-        return JSONResponse(status_code=502, content={"error": f"Không kết nối được API: {e}"})
-    if response.status_code != 200:
-        return JSONResponse(status_code=502, content={"error": f"API trả về HTTP {response.status_code}: {response.text[:200]}"})
-    try:
-        response.json()["choices"][0]["message"]["content"]
-    except (ValueError, KeyError, IndexError, TypeError):
-        return JSONResponse(status_code=502, content={"error": "API phản hồi không đúng định dạng chat/completions."})
-    AI_BASE_URL, AI_API_KEY, AI_MODEL = base_url, api_key, model
-    try:
-        save_ai_config(AI_BASE_URL, AI_API_KEY, AI_MODEL)
-    except OSError as e:
-        return JSONResponse(status_code=500, content={"error": f"Test thành công nhưng không lưu được cấu hình: {e}"})
-    return {"message": "API hoạt động và đã lưu cấu hình."}
 
 
 @app.post("/admin/upload")

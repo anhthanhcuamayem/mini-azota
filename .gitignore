@@ -1,5 +1,4 @@
 .env
-ai_config.json
 tests/.*.log
 __pycache__/
 *.pyc

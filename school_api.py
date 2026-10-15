@@ -12,9 +12,12 @@ import random
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+import requests
 
 import school_store as store
+import supabase_auth as auth
+import supabase_store as db
 
 router = APIRouter(prefix="/api")
 
@@ -116,22 +119,56 @@ def _require_exam_owner(request, exam_id):
 # ------------------------------------------------------------------ auth
 @router.post("/auth/register")
 async def register(request: Request, payload: dict):
-    account, error = store.create_account(
-        payload.get("email"), payload.get("name"), payload.get("role"),
-        payload.get("password"),
-    )
-    if error:
-        return _err(400, error)
-    token = store.create_auth_session(account["id"])
+    try:
+        account, error = store.create_account(
+            payload.get("email"), payload.get("name"), payload.get("role"),
+            payload.get("password"),
+        )
+        if error:
+            return _err(400, error)
+        token = store.create_auth_session(account["id"])
+    except auth.AuthError as exc:
+        if exc.status_code in (400, 422):
+            return _err(400, str(exc))
+        return _err(503, "Không kết nối được Supabase Auth. Kiểm tra cấu hình rồi thử lại.")
+    except (db.SupabaseError, requests.RequestException):
+        return _err(503, "Không kết nối được database. Kiểm tra cấu hình Supabase rồi thử lại.")
     return _set_cookie(JSONResponse(status_code=201, content={"user": account}), token)
 
 
 @router.post("/auth/login")
 async def login(request: Request, payload: dict):
-    account, error = store.login(payload.get("email"), payload.get("password"))
-    if error:
-        return _err(401, error)
-    token = store.create_auth_session(account["id"])
+    try:
+        account, error = store.login(payload.get("email"), payload.get("password"))
+        if error:
+            return _err(401, error)
+        token = store.create_auth_session(account["id"])
+    except (auth.AuthError, db.SupabaseError, requests.RequestException):
+        return _err(503, "Không kết nối được Supabase Auth. Kiểm tra cấu hình rồi thử lại.")
+    return _set_cookie(JSONResponse(content={"user": account}), token)
+
+
+@router.get("/auth/google")
+async def google_login(request: Request):
+    origin = str(request.base_url).rstrip("/")
+    redirect_to = f"{origin}/portal.html?oauth=1"
+    try:
+        return RedirectResponse(auth.google_url(redirect_to), status_code=307)
+    except auth.AuthError:
+        return _err(503, "Chưa cấu hình Supabase Auth.")
+
+
+@router.post("/auth/external")
+async def external_login(request: Request, payload: dict):
+    try:
+        account = store.login_with_access_token(payload.get("access_token"))
+        token = store.create_auth_session(account["id"])
+    except auth.AuthError as exc:
+        if exc.status_code in (400, 401, 403):
+            return _err(401, "Phiên đăng nhập Google không hợp lệ hoặc đã hết hạn.")
+        return _err(503, "Không kết nối được Supabase Auth. Kiểm tra cấu hình rồi thử lại.")
+    except (db.SupabaseError, requests.RequestException):
+        return _err(503, "Không lưu được hồ sơ tài khoản vào database.")
     return _set_cookie(JSONResponse(content={"user": account}), token)
 
 

@@ -3,86 +3,232 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản trị - Kho bộ đề & Tạo đề thi (AI)</title>
+    <title>Quản trị - Kho bộ đề &amp; Tạo đề thi (AI)</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/style.css">
     <style>
-        body { max-width: 820px; margin: 40px auto; padding: 0 16px; }
-        .admin-card {
-            background: var(--bg-card, #fff); border: 1px solid var(--border-color, #e5e7eb);
-            border-radius: 16px; padding: 24px; margin-bottom: 20px;
-            box-shadow: 0 4px 16px rgba(0,0,0,.06);
+        body {
+            max-width: 860px;
+            margin: 30px auto;
+            padding: 0 16px 60px;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            color: var(--text-main, #0f172a);
+            background: var(--bg-base, #f8fafc);
         }
-        .admin-card h2 { margin: 0 0 6px; font-size: 1.15rem; }
-        .admin-card p.hint { color: var(--text-muted, #6b7280); font-size: .9rem; margin: 0 0 16px; }
-        .admin-label { display: block; font-weight: 700; font-size: .88rem; margin: 14px 0 6px; }
+        .admin-card {
+            background: var(--bg-card, #fff);
+            border: 1.5px solid var(--border-color, #e2e8f0);
+            border-radius: 20px;
+            padding: 26px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 16px -1px rgba(15, 23, 42, 0.06);
+            transition: var(--transition);
+        }
+        .admin-card h2 {
+            margin: 0 0 6px;
+            font-size: 1.18rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: -0.01em;
+        }
+        .admin-card h2 i {
+            color: var(--primary, #4f46e5);
+        }
+        .admin-card p.hint {
+            color: var(--text-muted, #475569);
+            font-size: 0.88rem;
+            margin: 0 0 18px;
+            line-height: 1.5;
+        }
+        .admin-label {
+            display: block;
+            font-weight: 800;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: var(--text-muted, #475569);
+            margin: 16px 0 6px;
+        }
         .admin-input, .admin-select {
-            width: 100%; padding: 10px 12px; border: 1px solid var(--border-color, #e5e7eb);
-            border-radius: 10px; font-size: .95rem; background: var(--bg-card, #fff); color: inherit;
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid var(--border-color, #e2e8f0);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            background: var(--bg-card, #fff);
+            color: inherit;
+            font-family: inherit;
+            transition: var(--transition);
+        }
+        .admin-input:focus, .admin-select:focus {
+            outline: none;
+            border-color: var(--primary, #4f46e5);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.25);
         }
         .admin-btn {
-            margin-top: 18px; width: 100%; padding: 12px; border: 0; border-radius: 12px;
-            background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff;
-            font-weight: 800; font-size: 1rem; cursor: pointer;
+            margin-top: 20px;
+            width: 100%;
+            padding: 13px;
+            border: 0;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #4338ca, #4f46e5 50%, #6366f1);
+            color: #fff;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            font-family: inherit;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
         }
-        .admin-btn:disabled { opacity: .6; cursor: not-allowed; }
+        .admin-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(79, 70, 229, 0.45);
+        }
+        .admin-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
         .admin-btn.secondary { background: #475569; }
-        .admin-msg { margin-top: 14px; padding: 12px; border-radius: 10px; font-size: .9rem; display: none; white-space: pre-wrap; }
-        .admin-msg.ok { display: block; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
-        .admin-msg.err { display: block; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
-        .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
-        .status-item { background: var(--bg-card-sub, #f8fafc); border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 10px 12px; font-size: .88rem; }
-        .status-item b { display: block; color: var(--text-muted, #6b7280); font-size: .78rem; text-transform: uppercase; letter-spacing: .4px; }
-        .badge-ok { color: #047857; font-weight: 800; }
-        .badge-warn { color: #b45309; font-weight: 800; }
-        .top-links { display: flex; gap: 12px; margin-bottom: 18px; font-size: .9rem; }
-        .top-links a { color: #4f46e5; text-decoration: none; font-weight: 700; }
-        .mode-desc { font-size: .82rem; color: var(--text-muted, #6b7280); margin-top: 6px; }
+        .admin-msg {
+            margin-top: 14px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: none;
+            white-space: pre-wrap;
+        }
+        .admin-msg.ok {
+            display: block;
+            background: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+        }
+        .admin-msg.err {
+            display: block;
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+        .status-item {
+            background: var(--bg-card-sub, #f8fafc);
+            border: 1.5px solid var(--border-color, #e2e8f0);
+            border-radius: 14px;
+            padding: 12px 14px;
+            font-size: 0.92rem;
+        }
+        .status-item b {
+            display: block;
+            color: var(--text-muted, #475569);
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .badge-ok { color: #047857; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }
+        .badge-warn { color: #b45309; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }
+        .top-links {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 22px;
+            font-size: 0.92rem;
+            align-items: center;
+        }
+        .top-links a {
+            color: var(--primary, #4f46e5);
+            text-decoration: none;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 10px;
+            background: var(--bg-card, #fff);
+            border: 1px solid var(--border-color, #e2e8f0);
+            transition: var(--transition);
+        }
+        .top-links a:hover {
+            border-color: var(--primary, #4f46e5);
+            transform: translateY(-1px);
+        }
+        .mode-desc {
+            font-size: 0.82rem;
+            color: var(--text-muted, #475569);
+            margin-top: 6px;
+            line-height: 1.5;
+        }
         .quiz-row {
-            display: flex; align-items: center; gap: 12px; padding: 12px;
-            border: 1px solid var(--border-color, #e5e7eb); border-radius: 12px;
-            margin-top: 10px; background: var(--bg-card-sub, #f8fafc);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            border: 1.5px solid var(--border-color, #e2e8f0);
+            border-radius: 14px;
+            margin-top: 10px;
+            background: var(--bg-card-sub, #f8fafc);
+            transition: var(--transition);
+        }
+        .quiz-row:hover {
+            border-color: var(--primary-light, #6366f1);
+            background: var(--bg-card, #fff);
         }
         .quiz-row .quiz-meta { flex: 1; min-width: 0; }
-        .quiz-row .quiz-title { font-weight: 800; }
-        .quiz-row .quiz-sub { font-size: .82rem; color: var(--text-muted, #6b7280); margin-top: 3px; }
-        .quiz-badge { display: inline-block; font-size: .72rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+        .quiz-row .quiz-title { font-weight: 800; font-size: 0.98rem; }
+        .quiz-row .quiz-sub { font-size: 0.82rem; color: var(--text-muted, #475569); margin-top: 4px; }
+        .quiz-badge { display: inline-block; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
         .quiz-badge.subject { background: #eef2ff; color: #4338ca; }
         .quiz-badge.random { background: #fef3c7; color: #b45309; }
         .quiz-actions { display: flex; gap: 8px; flex-shrink: 0; }
-        .mini-btn { border: 1px solid var(--border-color, #e5e7eb); background: #fff; color: inherit;
-            border-radius: 9px; padding: 7px 10px; font-size: .82rem; font-weight: 700; cursor: pointer; }
+        .mini-btn {
+            border: 1px solid var(--border-color, #e2e8f0);
+            background: #fff;
+            color: inherit;
+            border-radius: 10px;
+            padding: 7px 12px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .mini-btn:hover:not(:disabled) {
+            border-color: var(--primary, #4f46e5);
+            color: var(--primary, #4f46e5);
+        }
         .mini-btn.danger { color: #b91c1c; border-color: #fecaca; }
-        .mini-btn:disabled { opacity: .5; cursor: not-allowed; }
+        .mini-btn.danger:hover:not(:disabled) { background: #fee2e2; }
+        .mini-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 </head>
 <body>
     <div class="top-links">
-        <a href="/">&#8592; Về trang thi</a>
-        <a href="/portal">Cổng lớp học</a>
+        <a href="/"><i class="fa-solid fa-arrow-left"></i> Về trang thi</a>
+        <a href="/portal"><i class="fa-solid fa-school"></i> Cổng lớp học</a>
     </div>
 
     <div class="admin-card">
-        <h2>&#128273; Cấu hình AI API</h2>
-        <p class="hint">Nhập thông tin API và bấm test. Chỉ lưu trên máy chủ sau khi test thành công.</p>
-        <form id="apiForm">
-            <label class="admin-label" for="apiBaseUrl">Base URL</label>
-            <input class="admin-input" id="apiBaseUrl" type="url" placeholder="https://example.com/v1" required>
-            <label class="admin-label" for="apiModel">Model</label>
-            <input class="admin-input" id="apiModel" value="llama-3.3-70b-versatile" required>
-            <label class="admin-label" for="apiKey">API key</label>
-            <input class="admin-input" id="apiKey" type="password" autocomplete="new-password" placeholder="Nhập API key" required>
-            <div id="adminKeyWrap" style="display:none;">
-                <label class="admin-label" for="adminKey">Admin key</label>
-                <input class="admin-input" type="password" id="adminKey" autocomplete="off" placeholder="Nhập ADMIN_KEY">
-            </div>
-            <button class="admin-btn" type="submit" id="testApiBtn">Test API và lưu</button>
-        </form>
-        <div class="admin-msg" id="apiMsg"></div>
-    </div>
-
-    <div class="admin-card">
-        <h2>&#128218; Tạo bộ đề mới từ tài liệu (Word / PDF / Text)</h2>
-        <p class="hint">Mỗi lần tải lên sẽ tạo thêm MỘT bộ đề trong kho. Học sinh vào trang thi sẽ chọn bộ đề muốn làm.</p>
+        <h2><i class="fa-solid fa-file-arrow-up"></i> Tạo bộ đề mới từ tài liệu (Word / PDF / Text)</h2>
+        <p class="hint">Mỗi lần tải lên sẽ tạo thêm MỘT bộ đề trong kho. Học sinh vào trang thi sẽ chọn bộ đề muốn làm. Cấu hình AI được lấy từ biến môi trường trên server.</p>
 
         <form id="uploadForm">
             <label class="admin-label" for="quizTitle">Tên bộ đề (để trống sẽ lấy theo tên file)</label>
@@ -101,13 +247,20 @@
             </select>
             <div class="mode-desc">"Đề ngẫu nhiên" tốn token và chậm hơn mỗi lượt (~30-60s), chỉ dùng khi muốn mỗi thí sinh một đề.</div>
 
-            <button class="admin-btn" type="submit" id="uploadBtn">+ Tạo bộ đề mới</button>
+            <div id="adminKeyWrap" style="display:none;">
+                <label class="admin-label" for="adminKey">Admin key</label>
+                <input class="admin-input" type="password" id="adminKey" autocomplete="off" placeholder="Nhập ADMIN_KEY">
+            </div>
+
+            <button class="admin-btn" type="submit" id="uploadBtn">
+                <i class="fa-solid fa-plus"></i> Tạo bộ đề mới
+            </button>
         </form>
         <div class="admin-msg" id="uploadMsg"></div>
     </div>
 
     <div class="admin-card">
-        <h2>&#128200; Trạng thái &amp; Kho bộ đề</h2>
+        <h2><i class="fa-solid fa-chart-line"></i> Trạng thái &amp; Kho bộ đề</h2>
         <div class="status-grid" id="statusGrid"><span class="hint">Đang tải...</span></div>
         <div id="quizList"></div>
         <div class="admin-msg" id="listMsg"></div>
@@ -118,9 +271,7 @@
         const uploadBtn = document.getElementById('uploadBtn');
         const uploadMsg = document.getElementById('uploadMsg');
         const listMsg = document.getElementById('listMsg');
-        const apiForm = document.getElementById('apiForm');
-        const apiMsg = document.getElementById('apiMsg');
-        const testApiBtn = document.getElementById('testApiBtn');
+        const adminKeyWrap = document.getElementById('adminKeyWrap');
 
         function showMsg(el, text, ok) {
             el.className = 'admin-msg ' + (ok ? 'ok' : 'err');
@@ -129,32 +280,14 @@
         function esc(s) {
             return String(s == null ? '' : s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
         }
-        function key() { return document.getElementById('adminKey').value; }
+        function key() {
+            const input = document.getElementById('adminKey');
+            return input ? input.value : '';
+        }
         function fmtDate(iso) {
             if (!iso) return '—';
             try { return new Date(iso).toLocaleString('vi-VN'); } catch (e) { return iso; }
         }
-
-        apiForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            testApiBtn.disabled = true;
-            testApiBtn.textContent = 'Đang kiểm tra...';
-            apiMsg.className = 'admin-msg';
-            try {
-                const res = await fetch('/admin/test-api', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({base_url: document.getElementById('apiBaseUrl').value,
-                        api_key: document.getElementById('apiKey').value,
-                        model: document.getElementById('apiModel').value, admin_key: key()})
-                });
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok) throw new Error(data.error || ('Lỗi ' + res.status));
-                showMsg(apiMsg, data.message, true);
-                document.getElementById('apiKey').value = '';
-                loadStatus();
-            } catch (err) { showMsg(apiMsg, err.message, false); }
-            finally { testApiBtn.disabled = false; testApiBtn.textContent = 'Test API và lưu'; }
-        });
 
         function renderQuizzes(quizzes) {
             const box = document.getElementById('quizList');
@@ -213,7 +346,7 @@
             try {
                 const res = await fetch('/admin/status');
                 const s = await res.json();
-                document.getElementById('adminKeyWrap').style.display = s.admin_protected ? 'block' : 'none';
+                if (adminKeyWrap) adminKeyWrap.style.display = s.admin_protected ? 'block' : 'none';
                 const quizzes = s.quizzes || [];
                 const totalQuestions = quizzes.reduce((sum, q) => sum + (q.question_count || 0), 0);
                 const cells = [

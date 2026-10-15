@@ -19,6 +19,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import supabase_store as db
+import supabase_auth as auth
 
 SESSION_TTL_DAYS = 30
 MEMBER_ROLES = {"student", "class_monitor", "vice_class_monitor", "team_leader"}
@@ -104,18 +105,29 @@ def create_account(email, name, role, password):
         return None, "Mật khẩu phải có ít nhất 6 ký tự."
     if find_account_by_email(email):
         return None, "Email đã được đăng ký."
+    try:
+        auth_user = auth.admin_create_user(email, password, name, role)
+    except auth.AuthError as exc:
+        message = str(exc).lower()
+        if exc.status_code in (400, 409, 422) and any(
+            word in message for word in ("already", "registered", "exists", "duplicate")
+        ):
+            return None, "Email đã được đăng ký."
+        raise
     account = {
         "id": uuid.uuid4().hex[:12],
         "email": email,
         "name": name,
         "role": role,
-        "password_hash": hash_password(password),
+        # Mật khẩu do Supabase Auth quản lý, không lưu bản sao trong app.
+        "password_hash": "",
         "created_at": _now(),
     }
     try:
         db.insert("accounts", account)
     except db.SupabaseError:
-        return None, "Email đã được đăng ký."
+        auth.admin_delete_user(auth_user.get("id"))
+        raise
     return public_account(account), None
 
 
@@ -143,10 +155,49 @@ def public_account(acc):
 
 
 def login(email, password):
-    acc = find_account_by_email(email)
-    if not acc or not verify_password(password or "", acc.get("password_hash", "")):
-        return None, "Email hoặc mật khẩu không đúng."
-    return public_account(acc), None
+    email = (email or "").strip().lower()
+    try:
+        data = auth.password_login(email, password or "")
+    except auth.AuthError as exc:
+        if exc.status_code in (400, 401):
+            return None, "Email hoặc mật khẩu không đúng."
+        raise
+    return ensure_account_from_auth_user(data.get("user") or {}), None
+
+
+def ensure_account_from_auth_user(auth_user):
+    """Tạo hồ sơ app cho user Supabase Auth nếu chưa có."""
+    email = (auth_user.get("email") or "").strip().lower()
+    if not email:
+        raise auth.AuthError("Tài khoản Supabase Auth chưa có email.", 422)
+    existing = find_account_by_email(email)
+    if existing:
+        return public_account(existing)
+    metadata = auth_user.get("user_metadata") or {}
+    name = (metadata.get("name") or metadata.get("full_name") or email.split("@", 1)[0]).strip()
+    role = metadata.get("role") if metadata.get("role") in ("teacher", "student") else "student"
+    account = {
+        "id": uuid.uuid4().hex[:12],
+        "email": email,
+        "name": name[:60] or email,
+        "role": role,
+        "password_hash": "",
+        "created_at": _now(),
+    }
+    try:
+        db.insert("accounts", account)
+    except db.SupabaseError:
+        # Hai request đăng nhập đầu tiên có thể cùng tạo profile.
+        existing = find_account_by_email(email)
+        if existing:
+            return public_account(existing)
+        raise
+    return public_account(account)
+
+
+def login_with_access_token(access_token):
+    auth_user = auth.get_user(access_token)
+    return ensure_account_from_auth_user(auth_user)
 
 
 # ---------------------------------------------------------------- phiên đăng nhập
